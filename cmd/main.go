@@ -30,31 +30,39 @@ import (
 
 func main() {
 	// Load configuration
+	log.Println("[MAIN] Starting application...")
 	cfg := config.LoadConfig()
-	log.Println("Configuration loaded:", cfg)
+	log.Printf("[MAIN] Configuration loaded: %v\n", cfg)
 
 	// Connect to MongoDB
+	log.Println("[MAIN] Attempting MongoDB connection...")
 	client, err := db.NewMongoConnection(cfg.MongoURI)
 	if err != nil {
-		log.Fatalf("Failed to connect to MongoDB: %v", err)
+		log.Fatalf("[MAIN] FATAL: Failed to connect to MongoDB: %v", err)
 	}
+	log.Println("[MAIN] MongoDB connection successful")
 	defer db.CloseConnection(client)
 
 	// Get database instance
+	log.Println("[MAIN] Getting database instance...")
 	database := client.Database(cfg.MongoDB)
 
 	// Seed database (creates indexes and initial data)
+	log.Println("[MAIN] Starting database seed...")
 	if err := db.SeedDatabase(database); err != nil {
-		log.Println("Warning: Database seed encountered an issue:", err)
+		log.Printf("[MAIN] WARNING: Database seed encountered an issue: %v\n", err)
 	}
+	log.Println("[MAIN] Database seed completed")
 
 	// Create router
+	log.Println("[MAIN] Creating router...")
 	router := routes.NewRouter(database)
+	log.Println("[MAIN] Router created successfully")
 
 	// Start server
 	addr := ":" + cfg.Port
-	log.Printf("Starting server on %s", addr)
+	log.Printf("[MAIN] Starting server on %s\n", addr)
 	if err := http.ListenAndServe(addr, router); err != nil {
-		log.Fatalf("Server error: %v", err)
+		log.Fatalf("[MAIN] FATAL: Server error: %v", err)
 	}
 }
