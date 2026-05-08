@@ -16,8 +16,13 @@ WORKDIR /root/
 
 COPY --from=builder /app/main .
 
-RUN chmod +x /root/main
+RUN chmod +x /root/main && ls -la /root/main
+
+ENV MONGO_URI="${MONGO_URI:-mongodb://localhost:27017}"
+ENV MONGO_DB="${MONGO_DB:-vetflow}"
+ENV PORT="${PORT:-8080}"
 
 EXPOSE 8080
 
+ENTRYPOINT ["/bin/sh", "-c"]
 CMD ["./main"]
