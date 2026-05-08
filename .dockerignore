@@ -1,0 +1,15 @@
+*.o
+*.a
+*.exe
+tmp/
+.git
+.gitignore
+*.log
+.DS_Store
+node_modules
+dist
+.env
+.env.local
+Dockerfile
+docker-compose.yml
+README.md
