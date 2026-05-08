@@ -16,7 +16,7 @@ WORKDIR /root/
 
 COPY --from=builder /app/main .
 
-RUN ls -la /root/ && chmod +x /root/main && file /root/main
+RUN chmod +x /root/main
 
 EXPOSE 8080
 
