@@ -29,7 +29,7 @@ func NewMongoConnection(mongoURI string) (*mongo.Client, error) {
 	// Verify connection with retry logic
 	pingCtx, pingCancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer pingCancel()
-	
+
 	err = client.Ping(pingCtx, nil)
 	if err != nil {
 		log.Printf("MongoDB ping failed: %v", err)
