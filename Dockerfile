@@ -15,8 +15,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 WORKDIR /root/
 
 COPY --from=builder /app/main .
+COPY entrypoint.sh .
 
-RUN chmod +x /root/main && ls -la /root/main
+RUN chmod +x /root/main /root/entrypoint.sh
 
 ENV MONGO_URI="${MONGO_URI:-mongodb://localhost:27017}"
 ENV MONGO_DB="${MONGO_DB:-vetflow}"
@@ -24,5 +25,4 @@ ENV PORT="${PORT:-8080}"
 
 EXPOSE 8080
 
-ENTRYPOINT ["/bin/sh", "-c"]
-CMD ["./main"]
+ENTRYPOINT ["/root/entrypoint.sh"]
