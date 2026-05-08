@@ -16,7 +16,7 @@ func NewMongoConnection(mongoURI string) (*mongo.Client, error) {
 
 	// Configure TLS
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: false,
+		InsecureSkipVerify: true,
 	}
 
 	opts := options.Client().
