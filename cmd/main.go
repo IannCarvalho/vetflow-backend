@@ -20,6 +20,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -29,6 +30,9 @@ import (
 )
 
 func main() {
+	// Direct stdout output - should always appear
+	fmt.Println("========== VETFLOW APPLICATION STARTING ==========")
+	
 	// Load configuration
 	log.Println("[MAIN] Starting application...")
 	cfg := config.LoadConfig()
