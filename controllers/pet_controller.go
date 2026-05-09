@@ -212,6 +212,7 @@ func (c *PetController) GetAllPublic(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(pets)
 }
+
 // GetByIDPublic godoc (PUBLIC - NO AUTH REQUIRED)
 // @Summary Get pet by ID (public)
 // @Description Get a specific pet by their ID (public endpoint)
@@ -246,6 +247,7 @@ func (c *PetController) GetByIDPublic(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(pet)
 }
+
 // Update godoc
 // @Summary Update pet
 // @Description Update an existing pet

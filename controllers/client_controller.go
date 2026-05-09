@@ -176,6 +176,7 @@ func (c *ClientController) GetAllPublic(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(clients)
 }
+
 // GetByIDPublic godoc (PUBLIC - NO AUTH REQUIRED)
 // @Summary Get client by ID (public)
 // @Description Get a specific client by their ID (public endpoint)
@@ -210,6 +211,7 @@ func (c *ClientController) GetByIDPublic(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(client)
 }
+
 // Update godoc
 // @Summary Update client
 // @Description Update an existing client
