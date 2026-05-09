@@ -116,6 +116,30 @@ func (c *VaccineController) GetAll(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(vaccines)
 }
 
+// GetAllPublic godoc (PUBLIC - NO AUTH REQUIRED)
+// @Summary Get all vaccines (public)
+// @Description Get all vaccines (public endpoint)
+// @Tags Vaccines
+// @Accept json
+// @Produce json
+// @Success 200 {array} models.Vaccine
+// @Failure 500 {object} map[string]string "Server error"
+// @Router /vaccines [get]
+func (c *VaccineController) GetAllPublic(w http.ResponseWriter, r *http.Request) {
+	vaccines, err := c.repo.FindAll(r.Context())
+	if err != nil {
+		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar todas as vacinas", err.Error(), "DB_QUERY_ERROR")
+		return
+	}
+
+	if vaccines == nil {
+		vaccines = make([]*models.Vaccine, 0)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(vaccines)
+}
+
 // GetByID godoc
 // @Summary Get vaccine by ID
 // @Description Get a specific vaccine by ID
@@ -129,6 +153,41 @@ func (c *VaccineController) GetAll(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /vaccines/{id} [get]
 func (c *VaccineController) GetByID(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de vacina inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+		return
+	}
+
+	vaccine, err := c.repo.FindByID(r.Context(), objectID)
+	if err != nil {
+		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar vacina", err.Error(), "DB_QUERY_ERROR")
+		return
+	}
+
+	if vaccine == nil {
+		writeErrorWithDetails(w, http.StatusNotFound, "Vacina não encontrada", "Nenhuma vacina com este ID existe no banco de dados", "VACCINE_NOT_FOUND")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(vaccine)
+}
+
+// GetByIDPublic godoc (PUBLIC - NO AUTH REQUIRED)
+// @Summary Get vaccine by ID (public)
+// @Description Get a specific vaccine by ID (public endpoint)
+// @Tags Vaccines
+// @Accept json
+// @Produce json
+// @Param id path string true "Vaccine ID"
+// @Success 200 {object} models.Vaccine
+// @Failure 400 {object} map[string]string "Invalid ID"
+// @Failure 404 {object} map[string]string "Vaccine not found"
+// @Failure 500 {object} map[string]string "Server error"
+// @Router /vaccines/{id} [get]
+func (c *VaccineController) GetByIDPublic(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {

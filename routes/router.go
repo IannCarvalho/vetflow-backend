@@ -99,9 +99,9 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 	// Client routes (protected)
 	// Client routes
 	r.Route("/clients", func(r chi.Router) {
-		// GET endpoints are public (read-only)
-		r.Get("/", clientController.GetAll)
-		r.Get("/{id}", clientController.GetByID)
+		// GET endpoints are public (read-only) - use Public versions
+		r.Get("/", clientController.GetAllPublic)
+		r.Get("/{id}", clientController.GetByIDPublic)
 
 		// POST/PUT/DELETE endpoints are protected
 		r.With(AuthMiddleware).Post("/", clientController.Create)
@@ -111,9 +111,9 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 
 	// Pet routes (GET public, write protected)
 	r.Route("/pets", func(r chi.Router) {
-		// GET endpoints are public (read-only)
-		r.Get("/", petController.GetAll)
-		r.Get("/{id}", petController.GetByID)
+		// GET endpoints are public (read-only) - use Public versions
+		r.Get("/", petController.GetAllPublic)
+		r.Get("/{id}", petController.GetByIDPublic)
 
 		// POST/PUT/DELETE endpoints are protected
 		r.With(AuthMiddleware).Post("/", petController.Create)
@@ -134,9 +134,9 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 
 	// Vaccine routes (GET public, write protected)
 	r.Route("/vaccines", func(r chi.Router) {
-		// GET endpoints are public (read-only)
-		r.Get("/", vaccineController.GetAll)
-		r.Get("/{id}", vaccineController.GetByID)
+		// GET endpoints are public (read-only) - use Public versions
+		r.Get("/", vaccineController.GetAllPublic)
+		r.Get("/{id}", vaccineController.GetByIDPublic)
 
 		// POST/PUT/DELETE endpoints are protected
 		r.With(AuthMiddleware).Post("/", vaccineController.Create)
