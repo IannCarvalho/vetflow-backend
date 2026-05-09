@@ -93,7 +93,7 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 
 	// Swagger documentation
 	r.Get("/swagger/*", httpSwagger.Handler(
-		httpSwagger.URL("http://localhost:8080/swagger/doc.json"),
+		httpSwagger.URL("/swagger/doc.json"),
 	))
 
 	// Client routes (protected)
