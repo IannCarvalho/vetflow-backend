@@ -67,6 +67,13 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
+	// Test public route
+	r.Get("/test-public", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"message":"public test works!"}`))
+	})
+
 	// Auth routes
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", authController.Register)
