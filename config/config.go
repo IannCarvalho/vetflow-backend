@@ -9,9 +9,9 @@ import (
 )
 
 type Config struct {
-	MongoURI   string
-	MongoDB    string
-	Port       string
+	MongoURI string
+	MongoDB  string
+	Port     string
 }
 
 // LoadConfig loads configuration from environment variables
@@ -24,10 +24,10 @@ func LoadConfig() *Config {
 		MongoDB:  getEnv("MONGO_DB", "vetflow"),
 		Port:     getEnv("PORT", "8080"),
 	}
-	
-	log.Printf("Config loaded - MONGO_URI: %s (len=%d), PORT: %s", 
+
+	log.Printf("Config loaded - MONGO_URI: %s (len=%d), PORT: %s",
 		maskPassword(config.MongoURI), len(config.MongoURI), config.Port)
-	
+
 	return config
 }
 
@@ -51,6 +51,6 @@ func maskPassword(uri string) string {
 
 // String returns a string representation of the config
 func (c *Config) String() string {
-	return fmt.Sprintf("Config{MongoURI: %s, MongoDB: %s, Port: %s}", 
+	return fmt.Sprintf("Config{MongoURI: %s, MongoDB: %s, Port: %s}",
 		maskPassword(c.MongoURI), c.MongoDB, c.Port)
 }

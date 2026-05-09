@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  vetflow-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      MONGO_URI: "***REMOVED_CONNECTION_STRING***"
+      MONGO_DB: "vetflow"
+      PORT: "8080"
+    restart: unless-stopped

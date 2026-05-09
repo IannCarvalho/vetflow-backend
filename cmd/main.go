@@ -32,14 +32,14 @@ import (
 func main() {
 	// Direct stdout output - should always appear
 	fmt.Println("========== VETFLOW APPLICATION STARTING ==========")
-	
+
 	// Create a health check endpoint that works before everything else
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, `{"status":"ok","service":"vetflow"}`)
 	})
-	
+
 	// Load configuration
 	log.Println("[MAIN] Starting application...")
 	cfg := config.LoadConfig()
