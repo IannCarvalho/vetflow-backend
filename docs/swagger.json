@@ -1,1317 +1,1200 @@
 {
-    "schemes": [
-        "http",
-        "https"
-    ],
-    "swagger": "2.0",
-    "info": {
-        "description": "Complete REST API for managing veterinary clinics, clients, pets, consultations and vaccines.",
-        "title": "VetFlow - Veterinary Management API",
-        "termsOfService": "http://swagger.io/terms/",
-        "contact": {
-            "name": "API Support",
-            "url": "http://www.swagger.io/support",
-            "email": "support@vetflow.local"
-        },
-        "license": {
-            "name": "Apache 2.0",
-            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-        },
-        "version": "1.0"
+  "schemes": ["http", "https"],
+  "swagger": "2.0",
+  "info": {
+    "description": "Complete REST API for managing veterinary clinics, clients, pets, consultations and vaccines.",
+    "title": "VetFlow - Veterinary Management API",
+    "termsOfService": "http://swagger.io/terms/",
+    "contact": {
+      "name": "API Support",
+      "url": "http://www.swagger.io/support",
+      "email": "support@vetflow.local"
     },
-    "basePath": "/",
-    "paths": {
-        "/clients": {
-            "get": {
-                "description": "Retrieve all registered clients",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Clients"
-                ],
-                "summary": "List all clients",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.Client"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "Create a new veterinary clinic client",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Clients"
-                ],
-                "summary": "Create a new client",
-                "parameters": [
-                    {
-                        "description": "Client object",
-                        "name": "client",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.Client"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/models.Client"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid input",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "version": "1.0"
+  },
+  "basePath": "/",
+  "paths": {
+    "/clients": {
+      "get": {
+        "description": "Retrieve all registered clients",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Clients"],
+        "summary": "List all clients",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/models.Client"
+              }
             }
-        },
-        "/clients/{id}": {
-            "get": {
-                "description": "Get a specific client by their ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Clients"
-                ],
-                "summary": "Get client by ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Client ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.Client"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Client not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "put": {
-                "description": "Update an existing client",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Clients"
-                ],
-                "summary": "Update client",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Client ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Updated client object",
-                        "name": "client",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.Client"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.Client"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid input",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Client not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Delete a client by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Clients"
-                ],
-                "summary": "Delete client",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Client ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No content"
-                    },
-                    "400": {
-                        "description": "Invalid ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Client not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
             }
-        },
-        "/consultations": {
-            "post": {
-                "description": "Create a new veterinary consultation record",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Consultations"
-                ],
-                "summary": "Create a new consultation",
-                "parameters": [
-                    {
-                        "description": "Consultation object",
-                        "name": "consultation",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.Consultation"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/models.Consultation"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid input",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/consultations/{id}": {
-            "get": {
-                "description": "Get a specific consultation by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Consultations"
-                ],
-                "summary": "Get consultation by ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Consultation ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.Consultation"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Consultation not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "put": {
-                "description": "Update an existing consultation",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Consultations"
-                ],
-                "summary": "Update consultation",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Consultation ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Updated consultation object",
-                        "name": "consultation",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.Consultation"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.Consultation"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid input",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Consultation not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Delete a consultation by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Consultations"
-                ],
-                "summary": "Delete consultation",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Consultation ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No content"
-                    },
-                    "400": {
-                        "description": "Invalid ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Consultation not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/pets": {
-            "get": {
-                "description": "Retrieve all pets, optionally filtered by owner",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Pets"
-                ],
-                "summary": "List all pets",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Filter by owner ID",
-                        "name": "owner_id",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.Pet"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "Create a new pet record",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Pets"
-                ],
-                "summary": "Create a new pet",
-                "parameters": [
-                    {
-                        "description": "Pet object",
-                        "name": "pet",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.Pet"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/models.Pet"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid input",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/pets/{id}": {
-            "get": {
-                "description": "Get a specific pet by their ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Pets"
-                ],
-                "summary": "Get pet by ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Pet ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.Pet"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Pet not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "put": {
-                "description": "Update an existing pet",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Pets"
-                ],
-                "summary": "Update pet",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Pet ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Updated pet object",
-                        "name": "pet",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.Pet"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.Pet"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid input",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Pet not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Delete a pet by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Pets"
-                ],
-                "summary": "Delete pet",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Pet ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No content"
-                    },
-                    "400": {
-                        "description": "Invalid ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Pet not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/vaccines": {
-            "get": {
-                "description": "Get all vaccines for a specific pet",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Vaccines"
-                ],
-                "summary": "List vaccines by pet",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Pet ID",
-                        "name": "pet_id",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.Vaccine"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid pet_id",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "Create a new vaccine record for a pet",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Vaccines"
-                ],
-                "summary": "Create a new vaccine",
-                "parameters": [
-                    {
-                        "description": "Vaccine object",
-                        "name": "vaccine",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.Vaccine"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/models.Vaccine"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid input",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/vaccines/{id}": {
-            "get": {
-                "description": "Get a specific vaccine by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Vaccines"
-                ],
-                "summary": "Get vaccine by ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Vaccine ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.Vaccine"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Vaccine not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "put": {
-                "description": "Update an existing vaccine",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Vaccines"
-                ],
-                "summary": "Update vaccine",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Vaccine ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Updated vaccine object",
-                        "name": "vaccine",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.Vaccine"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.Vaccine"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid input",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Vaccine not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Delete a vaccine by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Vaccines"
-                ],
-                "summary": "Delete vaccine",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Vaccine ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No content"
-                    },
-                    "400": {
-                        "description": "Invalid ID",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Vaccine not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
+          }
         }
-    },
-    "definitions": {
-        "models.Address": {
-            "type": "object",
-            "properties": {
-                "complement": {
-                    "type": "string"
-                },
-                "number": {
-                    "type": "string"
-                },
-                "street": {
-                    "type": "string"
-                },
-                "zip_code": {
-                    "type": "string"
-                }
+      },
+      "post": {
+        "description": "Create a new veterinary clinic client",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Clients"],
+        "summary": "Create a new client",
+        "parameters": [
+          {
+            "description": "Client object",
+            "name": "client",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/models.Client"
             }
-        },
-        "models.Anamnesis": {
-            "type": "object",
-            "properties": {
-                "behavior_change": {
-                    "type": "boolean"
-                },
-                "evolution_time": {
-                    "type": "string"
-                },
-                "happened_before": {
-                    "type": "boolean"
-                },
-                "main_complaint": {
-                    "type": "string"
-                },
-                "pain": {
-                    "type": "boolean"
-                },
-                "prior_vet_visit": {
-                    "type": "boolean"
-                },
-                "symptom_frequency": {
-                    "type": "string"
-                },
-                "symptoms_worsened": {
-                    "type": "boolean"
-                }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/models.Client"
             }
-        },
-        "models.Client": {
-            "type": "object",
-            "properties": {
-                "address": {
-                    "$ref": "#/definitions/models.Address"
-                },
-                "cpf": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "full_name": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
+          },
+          "400": {
+            "description": "Invalid input",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
             }
-        },
-        "models.Consultation": {
-            "type": "object",
-            "properties": {
-                "anamnesis": {
-                    "$ref": "#/definitions/models.Anamnesis"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "date": {
-                    "type": "string"
-                },
-                "diet": {
-                    "$ref": "#/definitions/models.Diet"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "pet_id": {
-                    "type": "string"
-                },
-                "physiological": {
-                    "$ref": "#/definitions/models.Physiological"
-                },
-                "summary": {
-                    "$ref": "#/definitions/models.Summary"
-                },
-                "vet_name": {
-                    "type": "string"
-                }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
             }
-        },
-        "models.Diet": {
-            "type": "object",
-            "properties": {
-                "amount_and_frequency": {
-                    "type": "string"
-                },
-                "diet_changed_recently": {
-                    "type": "boolean"
-                },
-                "food_type": {
-                    "type": "string"
-                },
-                "normal_water_intake": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "models.Pet": {
-            "type": "object",
-            "properties": {
-                "age": {
-                    "type": "integer"
-                },
-                "age_unit": {
-                    "type": "string"
-                },
-                "breed": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "neutered": {
-                    "type": "boolean"
-                },
-                "owner_id": {
-                    "type": "string"
-                },
-                "sex": {
-                    "type": "string"
-                },
-                "species": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "weight": {
-                    "type": "number"
-                }
-            }
-        },
-        "models.Physiological": {
-            "type": "object",
-            "properties": {
-                "normal_urine_feces": {
-                    "type": "boolean"
-                },
-                "respiratory_issues": {
-                    "type": "boolean"
-                },
-                "vomiting": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "models.Summary": {
-            "type": "object",
-            "properties": {
-                "environment_and_contacts": {
-                    "type": "string"
-                },
-                "evolution_time": {
-                    "type": "string"
-                },
-                "feces_urine": {
-                    "type": "string"
-                },
-                "feeding": {
-                    "type": "string"
-                },
-                "main_complaint": {
-                    "type": "string"
-                },
-                "medications": {
-                    "type": "string"
-                },
-                "vaccines_and_deworming": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.Vaccine": {
-            "type": "object",
-            "properties": {
-                "batch": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "date_applied": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "manufacturer": {
-                    "type": "string"
-                },
-                "next_dose_date": {
-                    "type": "string"
-                },
-                "notes": {
-                    "type": "string"
-                },
-                "pet_id": {
-                    "type": "string"
-                },
-                "vaccine_name": {
-                    "type": "string"
-                },
-                "vet_name": {
-                    "type": "string"
-                }
-            }
+          }
         }
+      }
     },
-    "externalDocs": {
-        "description": "OpenAPI",
-        "url": "https://swagger.io"
+    "/clients/{id}": {
+      "get": {
+        "description": "Get a specific client by their ID",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Clients"],
+        "summary": "Get client by ID",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Client ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/models.Client"
+            }
+          },
+          "400": {
+            "description": "Invalid ID",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "404": {
+            "description": "Client not found",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "description": "Update an existing client",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Clients"],
+        "summary": "Update client",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Client ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Updated client object",
+            "name": "client",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/models.Client"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/models.Client"
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "404": {
+            "description": "Client not found",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Delete a client by ID",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Clients"],
+        "summary": "Delete client",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Client ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Invalid ID",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "404": {
+            "description": "Client not found",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/consultations": {
+      "post": {
+        "description": "Create a new veterinary consultation record",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Consultations"],
+        "summary": "Create a new consultation",
+        "parameters": [
+          {
+            "description": "Consultation object",
+            "name": "consultation",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/models.Consultation"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/models.Consultation"
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/consultations/{id}": {
+      "get": {
+        "description": "Get a specific consultation by ID",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Consultations"],
+        "summary": "Get consultation by ID",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Consultation ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/models.Consultation"
+            }
+          },
+          "400": {
+            "description": "Invalid ID",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "404": {
+            "description": "Consultation not found",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "description": "Update an existing consultation",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Consultations"],
+        "summary": "Update consultation",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Consultation ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Updated consultation object",
+            "name": "consultation",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/models.Consultation"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/models.Consultation"
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "404": {
+            "description": "Consultation not found",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Delete a consultation by ID",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Consultations"],
+        "summary": "Delete consultation",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Consultation ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Invalid ID",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "404": {
+            "description": "Consultation not found",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pets": {
+      "get": {
+        "description": "Retrieve all pets, optionally filtered by owner",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Pets"],
+        "summary": "List all pets",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Filter by owner ID",
+            "name": "owner_id",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/models.Pet"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Create a new pet record",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Pets"],
+        "summary": "Create a new pet",
+        "parameters": [
+          {
+            "description": "Pet object",
+            "name": "pet",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/models.Pet"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/models.Pet"
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pets/{id}": {
+      "get": {
+        "description": "Get a specific pet by their ID",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Pets"],
+        "summary": "Get pet by ID",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Pet ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/models.Pet"
+            }
+          },
+          "400": {
+            "description": "Invalid ID",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "404": {
+            "description": "Pet not found",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "description": "Update an existing pet",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Pets"],
+        "summary": "Update pet",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Pet ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Updated pet object",
+            "name": "pet",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/models.Pet"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/models.Pet"
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "404": {
+            "description": "Pet not found",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Delete a pet by ID",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Pets"],
+        "summary": "Delete pet",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Pet ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Invalid ID",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "404": {
+            "description": "Pet not found",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vaccines": {
+      "get": {
+        "description": "Get all vaccines for a specific pet",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Vaccines"],
+        "summary": "List vaccines by pet",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Pet ID",
+            "name": "pet_id",
+            "in": "query",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/models.Vaccine"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pet_id",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Create a new vaccine record for a pet",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Vaccines"],
+        "summary": "Create a new vaccine",
+        "parameters": [
+          {
+            "description": "Vaccine object",
+            "name": "vaccine",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/models.Vaccine"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/models.Vaccine"
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vaccines/{id}": {
+      "get": {
+        "description": "Get a specific vaccine by ID",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Vaccines"],
+        "summary": "Get vaccine by ID",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Vaccine ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/models.Vaccine"
+            }
+          },
+          "400": {
+            "description": "Invalid ID",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "404": {
+            "description": "Vaccine not found",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "description": "Update an existing vaccine",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Vaccines"],
+        "summary": "Update vaccine",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Vaccine ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Updated vaccine object",
+            "name": "vaccine",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/models.Vaccine"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/models.Vaccine"
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "404": {
+            "description": "Vaccine not found",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Delete a vaccine by ID",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Vaccines"],
+        "summary": "Delete vaccine",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Vaccine ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Invalid ID",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "404": {
+            "description": "Vaccine not found",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
     }
+  },
+  "definitions": {
+    "models.Address": {
+      "type": "object",
+      "properties": {
+        "complement": {
+          "type": "string"
+        },
+        "number": {
+          "type": "string"
+        },
+        "street": {
+          "type": "string"
+        },
+        "zip_code": {
+          "type": "string"
+        }
+      }
+    },
+    "models.Anamnesis": {
+      "type": "object",
+      "properties": {
+        "behavior_change": {
+          "type": "boolean"
+        },
+        "evolution_time": {
+          "type": "string"
+        },
+        "happened_before": {
+          "type": "boolean"
+        },
+        "main_complaint": {
+          "type": "string"
+        },
+        "pain": {
+          "type": "boolean"
+        },
+        "prior_vet_visit": {
+          "type": "boolean"
+        },
+        "symptom_frequency": {
+          "type": "string"
+        },
+        "symptoms_worsened": {
+          "type": "boolean"
+        }
+      }
+    },
+    "models.Client": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/models.Address"
+        },
+        "cpf": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "full_name": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string"
+        }
+      }
+    },
+    "models.Consultation": {
+      "type": "object",
+      "properties": {
+        "anamnesis": {
+          "$ref": "#/definitions/models.Anamnesis"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "diet": {
+          "$ref": "#/definitions/models.Diet"
+        },
+        "id": {
+          "type": "string"
+        },
+        "pet_id": {
+          "type": "string"
+        },
+        "physiological": {
+          "$ref": "#/definitions/models.Physiological"
+        },
+        "summary": {
+          "$ref": "#/definitions/models.Summary"
+        },
+        "vet_name": {
+          "type": "string"
+        }
+      }
+    },
+    "models.Diet": {
+      "type": "object",
+      "properties": {
+        "amount_and_frequency": {
+          "type": "string"
+        },
+        "diet_changed_recently": {
+          "type": "boolean"
+        },
+        "food_type": {
+          "type": "string"
+        },
+        "normal_water_intake": {
+          "type": "boolean"
+        }
+      }
+    },
+    "models.Pet": {
+      "type": "object",
+      "properties": {
+        "age": {
+          "type": "integer"
+        },
+        "age_unit": {
+          "type": "string"
+        },
+        "breed": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "neutered": {
+          "type": "boolean"
+        },
+        "owner_id": {
+          "type": "string"
+        },
+        "sex": {
+          "type": "string"
+        },
+        "species": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string"
+        },
+        "weight": {
+          "type": "number"
+        }
+      }
+    },
+    "models.Physiological": {
+      "type": "object",
+      "properties": {
+        "normal_urine_feces": {
+          "type": "boolean"
+        },
+        "respiratory_issues": {
+          "type": "boolean"
+        },
+        "vomiting": {
+          "type": "boolean"
+        }
+      }
+    },
+    "models.Summary": {
+      "type": "object",
+      "properties": {
+        "environment_and_contacts": {
+          "type": "string"
+        },
+        "evolution_time": {
+          "type": "string"
+        },
+        "feces_urine": {
+          "type": "string"
+        },
+        "feeding": {
+          "type": "string"
+        },
+        "main_complaint": {
+          "type": "string"
+        },
+        "medications": {
+          "type": "string"
+        },
+        "vaccines_and_deworming": {
+          "type": "string"
+        }
+      }
+    },
+    "models.Vaccine": {
+      "type": "object",
+      "properties": {
+        "batch": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "date_applied": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "manufacturer": {
+          "type": "string"
+        },
+        "next_dose_date": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "pet_id": {
+          "type": "string"
+        },
+        "vaccine_name": {
+          "type": "string"
+        },
+        "vet_name": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "externalDocs": {
+    "description": "OpenAPI",
+    "url": "https://swagger.io"
+  }
 }
