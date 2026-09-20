@@ -22,6 +22,10 @@ go.work
 .env
 .env.local
 .env.*.local
+.env.production
+
+# Downloaded CLI archive (should not be tracked)
+flyctl.zip
 
 # IDE
 .vscode/
