@@ -27,32 +27,50 @@ A production-ready REST API for managing veterinary clinics, built with Go, Mong
 ### Project Structure
 
 ```
-veterinary-api/
+vetflow-backend/
 ├── cmd/
 │   └── main.go                      # Entry point
 ├── config/
 │   └── config.go                    # Configuration management
 ├── db/
-│   └── mongo.go                     # MongoDB connection
+│   ├── mongo.go                     # MongoDB connection
+│   └── seed.go                      # Test data seeding
 ├── models/
 │   ├── client.go
 │   ├── pet.go
 │   ├── consultation.go
-│   └── vaccine.go
+│   ├── vaccine.go
+│   ├── user.go
+│   ├── notification.go
+│   └── errors.go
 ├── repositories/
 │   ├── interfaces.go                # Repository interfaces
 │   ├── client_repository.go
 │   ├── pet_repository.go
 │   ├── consultation_repository.go
-│   └── vaccine_repository.go
+│   ├── vaccine_repository.go
+│   ├── user_repository.go
+│   └── notification_repository.go
+├── services/
+│   └── notification_service.go
 ├── controllers/
 │   ├── client_controller.go
 │   ├── pet_controller.go
 │   ├── consultation_controller.go
 │   ├── vaccine_controller.go
+│   ├── auth_controller.go
+│   ├── user_controller.go
+│   ├── social_auth_controller.go
+│   ├── oauth_callback_controller.go
+│   ├── notification_controller.go
 │   └── helpers.go
+├── helpers/
+│   ├── image.go
+│   └── password.go
 ├── routes/
-│   └── router.go                    # Route definitions
+│   ├── router.go                    # Route definitions
+│   └── middleware.go                # Auth middleware
+├── docs/                            # Swagger docs
 ├── docker-compose.yml
 ├── Dockerfile
 ├── .env.example
@@ -62,7 +80,7 @@ veterinary-api/
 
 ## Prerequisites
 
-- Go 1.26 or higher
+- Go 1.22 or higher
 - Docker and Docker Compose (optional, for containerized deployment)
 - MongoDB 7.0+ (if running locally)
 
@@ -392,6 +410,26 @@ All errors follow a consistent JSON format:
 - `vet_name`: string
 - `notes`: string
 - `created_at`: timestamp
+
+### User
+- `id`: MongoDB ObjectID (auto-generated)
+- `name`: string
+- `email`: string (required, unique) - login identifier
+- `password`: string (hashed; empty for social-only accounts)
+- `provider`: string - auth provider (e.g. "local", "google")
+- `profile_picture`: string
+- `verified`: boolean - email verification status
+- `created_at` / `updated_at`: timestamp
+
+### Notification
+- `id`: MongoDB ObjectID (auto-generated)
+- `type`: string - e.g. upcoming consultation / vaccine
+- `message`: string
+- `read`: boolean
+- `dismissed`: boolean
+- `created_at`: timestamp
+
+> The `User` and `Notification` fields above reflect the general shape of the models; check `models/user.go` and `models/notification.go` for the authoritative struct definitions.
 
 ## SOLID Principles Applied
 
