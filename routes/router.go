@@ -96,8 +96,7 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 		httpSwagger.URL("/swagger/doc.json"),
 	))
 
-	// Client routes (protected)
-	// Client routes
+	// Client routes (GET public, write protected)
 	r.Route("/clients", func(r chi.Router) {
 		// GET endpoints are public (read-only) - use Public versions
 		r.Get("/", clientController.GetAllPublic)
@@ -124,6 +123,7 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 	// Consultation routes (GET public, write protected)
 	r.Route("/consultations", func(r chi.Router) {
 		// GET endpoints are public (read-only)
+		r.Get("/", consultationController.GetAllPublic)
 		r.Get("/{id}", consultationController.GetByID)
 
 		// POST/PUT/DELETE endpoints are protected
