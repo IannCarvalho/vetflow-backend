@@ -4,10 +4,13 @@ A production-ready REST API for managing veterinary clinics, built with Go, Mong
 
 ## Features
 
+- **Authentication**: Email/password registration and login with JWT, email verification, plus social login (OAuth) and OAuth callback flow
+- **User Management**: Profile updates, profile picture management, and password changes (protected routes)
 - **Client Management**: Register and manage veterinary clinic clients
 - **Pet Management**: Track pets with detailed information (species, breed, age, weight)
 - **Consultation Records**: Store comprehensive consultation notes with anamnesis, diet, and physiological data
 - **Vaccine Tracking**: Maintain vaccine records with batch information and next dose dates
+- **Notifications**: Generate and manage notifications for upcoming consultations and vaccines
 - **RESTful API**: Clean, intuitive endpoints following REST conventions
 - **MongoDB Integration**: Scalable NoSQL database for flexible data storage
 - **Docker Support**: Easy deployment with Docker and Docker Compose
@@ -65,25 +68,15 @@ veterinary-api/
 
 ## Setup
 
-### 1. Navigate to Backend Directory
+### 1. Install Dependencies
 
-**Windows:**
-```powershell
-cd backend
-```
-
-**Mac/Linux:**
-```bash
-cd backend
-```
-
-### 2. Install Dependencies
+Run all commands from the repository root (this repo is the backend).
 
 ```bash
 go mod download
 ```
 
-### 3. Configure Environment
+### 2. Configure Environment
 
 **Windows (PowerShell):**
 ```powershell
@@ -97,7 +90,7 @@ cp .env.example .env
 nano .env  # or your preferred editor
 ```
 
-### 4. Run with Docker Compose (Recommended - All Platforms)
+### 3. Run with Docker Compose (Recommended - All Platforms)
 
 From the root directory:
 
@@ -108,7 +101,7 @@ docker-compose up -d
 # The API will be available at http://localhost:8080
 ```
 
-### 5. Run Locally
+### 4. Run Locally
 
 **Start MongoDB first:**
 
@@ -140,37 +133,60 @@ The API will be available at `http://localhost:8080`
 
 ## API Endpoints
 
+> **Auth model**: Read-only `GET` endpoints for clients, pets, consultations and vaccines are public. All `POST`/`PUT`/`DELETE` endpoints are protected and require the auth middleware (send the token as configured by the middleware). User and notification routes are fully protected.
+
+Interactive API docs are available at `GET /swagger` (redirects to `/swagger/index.html`).
+
 ### Health Check
 - `GET /health` - Check API status
 
+### Authentication
+- `POST /auth/register` - Register a new user
+- `POST /auth/login` - Log in with email/password
+- `POST /auth/social-login` - Log in via social provider
+- `POST /auth/oauth/callback` - OAuth callback handler
+- `GET /auth/verify/{token}` - Verify email/account with token
+
+### Users (protected)
+- `PUT /users/profile` - Update profile
+- `PUT /users/profile-picture` - Update profile picture
+- `DELETE /users/profile-picture` - Remove profile picture
+- `PUT /users/password` - Change password
+- `PUT /users/password/set` - Set password (for accounts created via social login)
+
 ### Clients
-- `POST /clients` - Create a new client
-- `GET /clients` - List all clients
-- `GET /clients/{id}` - Get client by ID
-- `PUT /clients/{id}` - Update client
-- `DELETE /clients/{id}` - Delete client (cascades to pets, consultations, vaccines)
+- `GET /clients` - List all clients *(public)*
+- `GET /clients/{id}` - Get client by ID *(public)*
+- `POST /clients` - Create a new client *(protected)*
+- `PUT /clients/{id}` - Update client *(protected)*
+- `DELETE /clients/{id}` - Delete client, cascades to pets, consultations, vaccines *(protected)*
 
 ### Pets
-- `POST /pets` - Create a new pet
-- `GET /pets` - List all pets
-- `GET /pets?owner_id={clientId}` - List pets by owner
-- `GET /pets/{id}` - Get pet by ID
-- `PUT /pets/{id}` - Update pet
-- `DELETE /pets/{id}` - Delete pet (cascades to consultations, vaccines)
+- `GET /pets` - List all pets *(public)*
+- `GET /pets?owner_id={clientId}` - List pets by owner *(public)*
+- `GET /pets/{id}` - Get pet by ID *(public)*
+- `POST /pets` - Create a new pet *(protected)*
+- `PUT /pets/{id}` - Update pet *(protected)*
+- `DELETE /pets/{id}` - Delete pet, cascades to consultations, vaccines *(protected)*
 
 ### Consultations
-- `POST /consultations` - Create a new consultation
-- `GET /consultations/{id}` - Get consultation by ID
-- `GET /consultations?pet_id={petId}` - List consultations by pet
-- `PUT /consultations/{id}` - Update consultation
-- `DELETE /consultations/{id}` - Delete consultation
+- `GET /consultations/{id}` - Get consultation by ID *(public)*
+- `POST /consultations` - Create a new consultation *(protected)*
+- `PUT /consultations/{id}` - Update consultation *(protected)*
+- `DELETE /consultations/{id}` - Delete consultation *(protected)*
 
 ### Vaccines
-- `POST /vaccines` - Create a new vaccine record
-- `GET /vaccines/{id}` - Get vaccine by ID
-- `GET /vaccines?pet_id={petId}` - List vaccines by pet
-- `PUT /vaccines/{id}` - Update vaccine record
-- `DELETE /vaccines/{id}` - Delete vaccine record
+- `GET /vaccines` - List all vaccine records *(public)*
+- `GET /vaccines/{id}` - Get vaccine by ID *(public)*
+- `POST /vaccines` - Create a new vaccine record *(protected)*
+- `PUT /vaccines/{id}` - Update vaccine record *(protected)*
+- `DELETE /vaccines/{id}` - Delete vaccine record *(protected)*
+
+### Notifications (protected)
+- `POST /notifications/generate` - Generate notifications for upcoming consultations/vaccines
+- `GET /notifications` - List notifications
+- `PUT /notifications/{id}/read` - Mark a notification as read
+- `PUT /notifications/{id}/dismiss` - Dismiss a notification
 
 ## API Examples
 
@@ -466,9 +482,9 @@ go build -o vetflow ./cmd/main.go
 
 **Build Docker image (all platforms):**
 
-From the root directory:
+From the repository root:
 ```powershell
-docker build -t vetflow:latest -f backend/Dockerfile .
+docker build -t vetflow:latest .
 ```
 
 ## Database Indexes
@@ -500,6 +516,3 @@ For issues or questions, please open an issue in the repository.
 ---
 
 **Built with Go, MongoDB, and ❤️ for veterinary professionals.**
-#   U p d a t e d  
- #   T r i g g e r   r e b u i l d  
- 
