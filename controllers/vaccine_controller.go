@@ -126,6 +126,29 @@ func (c *VaccineController) GetAll(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /vaccines [get]
 func (c *VaccineController) GetAllPublic(w http.ResponseWriter, r *http.Request) {
+	// When a pet_id filter is provided, return only that pet's vaccines.
+	if petID := r.URL.Query().Get("pet_id"); petID != "" {
+		objectID, err := primitive.ObjectIDFromHex(petID)
+		if err != nil {
+			writeErrorWithDetails(w, http.StatusBadRequest, "Formato de pet_id inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_PET_ID_FORMAT")
+			return
+		}
+
+		vaccines, err := c.repo.FindByPetID(r.Context(), objectID)
+		if err != nil {
+			writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar vacinas", err.Error(), "DB_QUERY_ERROR")
+			return
+		}
+
+		if vaccines == nil {
+			vaccines = make([]*models.Vaccine, 0)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(vaccines)
+		return
+	}
+
 	vaccines, err := c.repo.FindAll(r.Context())
 	if err != nil {
 		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar todas as vacinas", err.Error(), "DB_QUERY_ERROR")

@@ -6,6 +6,8 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/vetflow/veterinary-api/helpers"
@@ -16,22 +18,38 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// SeedDatabase clears the database and populates it with test data
+// SeedDatabase ensures indices exist and populates the database with test data
+// only when it is empty. Existing data is never dropped, so restarting the
+// server does not wipe records created during use. Set SEED_FORCE=true to force
+// a clean re-seed (drops all collections first).
 func SeedDatabase(db *mongo.Database) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Create indices
+	// Create indices (idempotent - safe to run on every startup)
 	if err := createUserEmailIndex(db, ctx); err != nil {
 		log.Printf("Warning: Failed to create email index: %v", err)
 	}
 
-	// Clear all collections
-	if err := clearCollections(db, ctx); err != nil {
-		return fmt.Errorf("failed to clear collections: %w", err)
-	}
+	forceSeed := strings.EqualFold(os.Getenv("SEED_FORCE"), "true")
 
-	log.Println("Database cleared")
+	if forceSeed {
+		if err := clearCollections(db, ctx); err != nil {
+			return fmt.Errorf("failed to clear collections: %w", err)
+		}
+		log.Println("SEED_FORCE=true -> database cleared for a clean re-seed")
+	} else {
+		// Skip seeding if the database already has data.
+		count, err := db.Collection("users").EstimatedDocumentCount(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to check existing data: %w", err)
+		}
+		if count > 0 {
+			log.Printf("Database already has data (%d users) - skipping seed", count)
+			return nil
+		}
+		log.Println("Database is empty - seeding test data")
+	}
 
 	// Seed test data
 	if err := seedTestData(db, ctx); err != nil {
