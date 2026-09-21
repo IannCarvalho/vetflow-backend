@@ -12,4 +12,7 @@ services:
     environment:
       # Set SEED_FORCE=true in the shell to force a clean re-seed on startup.
       SEED_FORCE: "${SEED_FORCE:-false}"
+      # JWT signing secret. Override in production (Render env var). Falls back to
+      # a dev default inside the app if unset.
+      JWT_SECRET: "${JWT_SECRET:-vetflow-dev-secret-change-me}"
     restart: unless-stopped
