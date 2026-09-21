@@ -4,9 +4,12 @@ import (
 	"context"
 	"net/http"
 	"strings"
+
+	"github.com/vetflow/veterinary-api/helpers"
 )
 
-// AuthMiddleware validates token from Authorization header
+// AuthMiddleware validates the JWT from the Authorization header and injects the
+// authenticated user's ID into the request context.
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
@@ -22,30 +25,16 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// For now, extract user ID from context (passed from OAuth or auth flow)
-		// In production, validate JWT token properly
-		userID := extractUserIDFromHeader(r)
-		if userID == "" {
-			http.Error(w, `{"error":"invalid token"}`, http.StatusUnauthorized)
+		// Validate the JWT and read the user ID from its claims.
+		claims, err := helpers.ParseToken(parts[1])
+		if err != nil || claims.UserID == "" {
+			http.Error(w, `{"error":"invalid or expired token"}`, http.StatusUnauthorized)
 			return
 		}
 
-		// Add user ID to request context
-		ctx := context.WithValue(r.Context(), "userID", userID)
+		// Add user ID to request context.
+		// Key must match the one read by getUserIDFromContext in controllers/helpers.go.
+		ctx := context.WithValue(r.Context(), "userID", claims.UserID) //nolint:staticcheck // string key matches existing reader
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
-}
-
-// extractUserIDFromHeader extracts user ID from request headers or token
-// This is a simplified implementation - in production, use proper JWT validation
-func extractUserIDFromHeader(r *http.Request) string {
-	// Try to get from custom header
-	if userID := r.Header.Get("X-User-ID"); userID != "" {
-		return userID
-	}
-
-	// TODO: Implement proper JWT token parsing when JWT is implemented
-	// For now, accept any token and expect X-User-ID header
-
-	return ""
 }

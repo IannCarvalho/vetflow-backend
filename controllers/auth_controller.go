@@ -64,10 +64,17 @@ func (c *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Issue a signed JWT for the newly created user.
+	token, err := helpers.GenerateToken(user.ID.Hex())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to generate token")
+		return
+	}
+
 	// Create auth response (password should not be exposed)
 	response := models.AuthResponse{
 		User:  user,
-		Token: "dummy_token_123", // TODO: Replace with actual JWT token
+		Token: token,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -126,10 +133,17 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Issue a signed JWT for the authenticated user.
+	token, err := helpers.GenerateToken(user.ID.Hex())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to generate token")
+		return
+	}
+
 	// Create auth response
 	response := models.AuthResponse{
 		User:  user,
-		Token: "dummy_token_123", // TODO: Replace with actual JWT token
+		Token: token,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
