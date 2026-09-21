@@ -7,8 +7,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
-      MONGO_URI: "***REMOVED_CONNECTION_STRING***"
-      MONGO_DB: "vetflow"
-      PORT: "8080"
+      # Set SEED_FORCE=true in the shell to force a clean re-seed on startup.
+      SEED_FORCE: "${SEED_FORCE:-false}"
     restart: unless-stopped
