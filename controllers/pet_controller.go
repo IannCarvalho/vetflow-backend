@@ -196,7 +196,28 @@ func (c *PetController) GetAll(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /pets [get]
 func (c *PetController) GetAllPublic(w http.ResponseWriter, r *http.Request) {
-	var pets []*models.Pet
+	// When an owner_id filter is provided, return only that client's pets.
+	if ownerID := r.URL.Query().Get("owner_id"); ownerID != "" {
+		objectID, err := primitive.ObjectIDFromHex(ownerID)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "Invalid owner_id format")
+			return
+		}
+
+		pets, err := c.repo.FindByOwnerID(r.Context(), objectID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "Failed to retrieve pets")
+			return
+		}
+
+		if pets == nil {
+			pets = make([]*models.Pet, 0)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(pets)
+		return
+	}
 
 	pets, err := c.repo.FindAll(r.Context())
 

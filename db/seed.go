@@ -6,6 +6,8 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/vetflow/veterinary-api/helpers"
@@ -16,22 +18,38 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// SeedDatabase clears the database and populates it with test data
+// SeedDatabase ensures indices exist and populates the database with test data
+// only when it is empty. Existing data is never dropped, so restarting the
+// server does not wipe records created during use. Set SEED_FORCE=true to force
+// a clean re-seed (drops all collections first).
 func SeedDatabase(db *mongo.Database) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Create indices
+	// Create indices (idempotent - safe to run on every startup)
 	if err := createUserEmailIndex(db, ctx); err != nil {
 		log.Printf("Warning: Failed to create email index: %v", err)
 	}
 
-	// Clear all collections
-	if err := clearCollections(db, ctx); err != nil {
-		return fmt.Errorf("failed to clear collections: %w", err)
-	}
+	forceSeed := strings.EqualFold(os.Getenv("SEED_FORCE"), "true")
 
-	log.Println("Database cleared")
+	if forceSeed {
+		if err := clearCollections(db, ctx); err != nil {
+			return fmt.Errorf("failed to clear collections: %w", err)
+		}
+		log.Println("SEED_FORCE=true -> database cleared for a clean re-seed")
+	} else {
+		// Skip seeding if the database already has data.
+		count, err := db.Collection("users").EstimatedDocumentCount(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to check existing data: %w", err)
+		}
+		if count > 0 {
+			log.Printf("Database already has data (%d users) - skipping seed", count)
+			return nil
+		}
+		log.Println("Database is empty - seeding test data")
+	}
 
 	// Seed test data
 	if err := seedTestData(db, ctx); err != nil {
@@ -219,15 +237,11 @@ func seedTestData(db *mongo.Database, ctx context.Context) error {
 			vetID = vetUser2.ID
 		}
 
-		// Some consultations have return dates scheduled for the future (7 days, 1 day, or today from now)
+		// About 60% of consultations schedule a follow-up, spread across the
+		// next 1..45 days so the data looks realistic instead of clustered.
 		var returnDate *time.Time
-		if i%3 == 0 {
-			// 7 days from now
-			rd := time.Now().AddDate(0, 0, 7)
-			returnDate = &rd
-		} else if i%3 == 1 {
-			// 1 day from now
-			rd := time.Now().AddDate(0, 0, 1)
+		if rand.Float32() < 0.6 {
+			rd := time.Now().AddDate(0, 0, 1+rand.Intn(45))
 			returnDate = &rd
 		}
 
@@ -292,7 +306,8 @@ func seedTestData(db *mongo.Database, ctx context.Context) error {
 	var vaccines []*models.Vaccine
 	for i := 0; i < 30; i++ {
 		pet := pets[rand.Intn(len(pets))]
-		appliedDate := time.Now().AddDate(0, -rand.Intn(12), -rand.Intn(30))
+		// Applied 1..11 months ago (always in the past).
+		appliedDate := time.Now().AddDate(0, -(1 + rand.Intn(11)), -rand.Intn(28))
 
 		// Alternate between the two vets
 		vetID := vetUser1.ID
@@ -300,17 +315,13 @@ func seedTestData(db *mongo.Database, ctx context.Context) error {
 			vetID = vetUser2.ID
 		}
 
-		// Some vaccines have next dose dates that trigger notifications (7 days, 1 day, or today)
+		// Next dose spread out so the dashboard shows a realistic mix:
+		// ~1/3 upcoming within the next 3..30 days, the rest 2..12 months out.
 		var nextDoseDate time.Time
-		if i%3 == 0 {
-			// 7 days from now
-			nextDoseDate = time.Now().AddDate(0, 0, 7)
-		} else if i%3 == 1 {
-			// 1 day from now
-			nextDoseDate = time.Now().AddDate(0, 0, 1)
+		if rand.Float32() < 0.33 {
+			nextDoseDate = time.Now().AddDate(0, 0, 3+rand.Intn(28))
 		} else {
-			// Default: 12 months from now (no notification)
-			nextDoseDate = appliedDate.AddDate(0, 12, 0)
+			nextDoseDate = time.Now().AddDate(0, 2+rand.Intn(10), rand.Intn(28))
 		}
 
 		vaccine := models.Vaccine{
