@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: vetflow-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: MONGO_DB
+        value: vetflow
+      # Set MONGO_URI in the Render dashboard (Environment tab) — never commit the real value.
+      - key: MONGO_URI
+        sync: false
