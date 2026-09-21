@@ -9,4 +9,7 @@ services:
       - "8080:8080"
     env_file:
       - .env
+    environment:
+      # Set SEED_FORCE=true in the shell to force a clean re-seed on startup.
+      SEED_FORCE: "${SEED_FORCE:-false}"
     restart: unless-stopped
