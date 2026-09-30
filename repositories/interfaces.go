@@ -53,6 +53,17 @@ type VaccineRepository interface {
 	DeleteByPetID(ctx context.Context, petID primitive.ObjectID) error
 }
 
+// PrescriptionRepository defines operations for prescription (receituário) data
+type PrescriptionRepository interface {
+	Create(ctx context.Context, prescription *models.Prescription) error
+	FindByID(ctx context.Context, id primitive.ObjectID) (*models.Prescription, error)
+	FindByVetID(ctx context.Context, vetID primitive.ObjectID) ([]*models.Prescription, error)
+	FindByPetID(ctx context.Context, petID primitive.ObjectID) ([]*models.Prescription, error)
+	Update(ctx context.Context, id primitive.ObjectID, prescription *models.Prescription) error
+	Delete(ctx context.Context, id primitive.ObjectID) error
+	DeleteByPetID(ctx context.Context, petID primitive.ObjectID) error
+}
+
 // NotificationRepository defines operations for notification data
 type NotificationRepository interface {
 	Create(ctx context.Context, notification *models.Notification) error

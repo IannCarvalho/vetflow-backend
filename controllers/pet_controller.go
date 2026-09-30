@@ -17,6 +17,7 @@ type PetController struct {
 	clientRepo       repositories.ClientRepository
 	consultationRepo repositories.ConsultationRepository
 	vaccineRepo      repositories.VaccineRepository
+	prescriptionRepo repositories.PrescriptionRepository
 }
 
 // NewPetController creates a new pet controller with dependency injection
@@ -25,12 +26,14 @@ func NewPetController(
 	clientRepo repositories.ClientRepository,
 	consultationRepo repositories.ConsultationRepository,
 	vaccineRepo repositories.VaccineRepository,
+	prescriptionRepo repositories.PrescriptionRepository,
 ) *PetController {
 	return &PetController{
 		repo:             repo,
 		clientRepo:       clientRepo,
 		consultationRepo: consultationRepo,
 		vaccineRepo:      vaccineRepo,
+		prescriptionRepo: prescriptionRepo,
 	}
 }
 
@@ -370,6 +373,12 @@ func (c *PetController) Delete(w http.ResponseWriter, r *http.Request) {
 	// Cascade delete: Then delete all vaccines for this pet
 	if err := c.vaccineRepo.DeleteByPetID(ctx, objectID); err != nil {
 		writeError(w, http.StatusInternalServerError, "Failed to delete pet vaccines")
+		return
+	}
+
+	// Cascade delete: Then delete all prescriptions for this pet
+	if err := c.prescriptionRepo.DeleteByPetID(ctx, objectID); err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to delete pet prescriptions")
 		return
 	}
 

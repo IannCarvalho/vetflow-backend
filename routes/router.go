@@ -44,14 +44,15 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 	consultationRepo := repositories.NewConsultationRepository(db.Collection("consultations"))
 	vaccineRepo := repositories.NewVaccineRepository(db.Collection("vaccines"))
 	userRepo := repositories.NewUserRepository(db.Collection("users"))
+	prescriptionRepo := repositories.NewPrescriptionRepository(db.Collection("prescriptions"))
 	notificationRepo := repositories.NewNotificationRepository(db)
 
 	// Initialize services
 	notificationService := services.NewNotificationService(notificationRepo, consultationRepo, vaccineRepo, petRepo)
 
 	// Initialize controllers
-	clientController := controllers.NewClientController(clientRepo, petRepo, consultationRepo, vaccineRepo)
-	petController := controllers.NewPetController(petRepo, clientRepo, consultationRepo, vaccineRepo)
+	clientController := controllers.NewClientController(clientRepo, petRepo, consultationRepo, vaccineRepo, prescriptionRepo)
+	petController := controllers.NewPetController(petRepo, clientRepo, consultationRepo, vaccineRepo, prescriptionRepo)
 	consultationController := controllers.NewConsultationController(consultationRepo)
 	vaccineController := controllers.NewVaccineController(vaccineRepo)
 	authController := controllers.NewAuthController(userRepo)
@@ -59,6 +60,7 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 	socialAuthController := controllers.NewSocialAuthController(userRepo)
 	oauthCallbackController := controllers.NewOAuthCallbackController(userRepo)
 	notificationController := controllers.NewNotificationController(notificationService)
+	prescriptionController := controllers.NewPrescriptionController(prescriptionRepo)
 
 	// Health check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -134,6 +136,16 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 		r.Post("/", vaccineController.Create)
 		r.Put("/{id}", vaccineController.Update)
 		r.Delete("/{id}", vaccineController.Delete)
+	})
+
+	// Prescription routes (fully protected - receituário is private to the vet)
+	r.Route("/prescriptions", func(r chi.Router) {
+		r.Use(AuthMiddleware)
+		r.Get("/", prescriptionController.GetAll)
+		r.Post("/", prescriptionController.Create)
+		r.Get("/{id}", prescriptionController.GetByID)
+		r.Put("/{id}", prescriptionController.Update)
+		r.Delete("/{id}", prescriptionController.Delete)
 	})
 
 	// Notification routes (protected)
