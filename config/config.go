@@ -4,14 +4,23 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	MongoURI string
-	MongoDB  string
-	Port     string
+	MongoURI  string
+	MongoDB   string
+	Port      string
+	AppEnv    string
+	JWTSecret string
+}
+
+// IsProduction reports whether the app is running in a production environment.
+func (c *Config) IsProduction() bool {
+	env := strings.ToLower(c.AppEnv)
+	return env == "production" || env == "prod"
 }
 
 // LoadConfig loads configuration from environment variables
@@ -20,15 +29,27 @@ func LoadConfig() *Config {
 	_ = godotenv.Load()
 
 	config := &Config{
-		MongoURI: getEnv("MONGO_URI", "mongodb://mongo:27017"),
-		MongoDB:  getEnv("MONGO_DB", "vetflow"),
-		Port:     getEnv("PORT", "8080"),
+		MongoURI:  getEnv("MONGO_URI", "mongodb://mongo:27017"),
+		MongoDB:   getEnv("MONGO_DB", "vetflow"),
+		Port:      getEnv("PORT", "8080"),
+		AppEnv:    getEnv("APP_ENV", "development"),
+		JWTSecret: os.Getenv("JWT_SECRET"),
 	}
 
-	log.Printf("Config loaded - MONGO_URI: %s (len=%d), PORT: %s",
-		maskPassword(config.MongoURI), len(config.MongoURI), config.Port)
+	log.Printf("Config loaded - MONGO_URI: %s (len=%d), PORT: %s, APP_ENV: %s",
+		maskPassword(config.MongoURI), len(config.MongoURI), config.Port, config.AppEnv)
 
 	return config
+}
+
+// Validate checks that required configuration is present. In production a
+// dedicated JWT_SECRET is mandatory; the app must refuse to start without it
+// rather than silently signing tokens with a well-known development secret.
+func (c *Config) Validate() error {
+	if c.IsProduction() && c.JWTSecret == "" {
+		return fmt.Errorf("JWT_SECRET must be set in production (APP_ENV=%s)", c.AppEnv)
+	}
+	return nil
 }
 
 // getEnv gets an environment variable with a default value

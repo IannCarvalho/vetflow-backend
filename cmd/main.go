@@ -44,6 +44,11 @@ func main() {
 	cfg := config.LoadConfig()
 	log.Printf("[MAIN] Configuration loaded: %v\n", cfg)
 
+	// Fail fast on invalid/unsafe configuration (e.g. missing JWT_SECRET in prod).
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("[MAIN] FATAL: Invalid configuration: %v", err)
+	}
+
 	// Connect to MongoDB
 	log.Println("[MAIN] Attempting MongoDB connection...")
 	client, err := db.NewMongoConnection(cfg.MongoURI)

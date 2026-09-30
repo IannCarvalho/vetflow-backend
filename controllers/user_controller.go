@@ -220,7 +220,8 @@ func (c *UserController) ChangePassword(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var req struct {
-		NewPassword string `json:"new_password"`
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -229,6 +230,10 @@ func (c *UserController) ChangePassword(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Validate input
+	if req.CurrentPassword == "" {
+		writeError(w, http.StatusBadRequest, "Current password is required")
+		return
+	}
 	if req.NewPassword == "" {
 		writeError(w, http.StatusBadRequest, "New password is required")
 		return
@@ -257,6 +262,18 @@ func (c *UserController) ChangePassword(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if user == nil {
+		writeError(w, http.StatusUnauthorized, "Invalid current password")
+		return
+	}
+
+	// Social-login users without a password must use /users/password/set instead.
+	if user.Password == "" {
+		writeError(w, http.StatusBadRequest, "This account has no password set. Use /users/password/set to create one.")
+		return
+	}
+
+	// Verify the current password before allowing a change.
+	if !helpers.VerifyPassword(user.Password, req.CurrentPassword) {
 		writeError(w, http.StatusUnauthorized, "Invalid current password")
 		return
 	}

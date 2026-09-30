@@ -106,10 +106,17 @@ func (c *SocialAuthController) SocialLogin(w http.ResponseWriter, r *http.Reques
 		log.Printf("User already exists: id=%s, email=%s", user.ID.Hex(), email)
 	}
 
+	// Issue a real signed JWT so social-login sessions can call protected routes.
+	token, err := helpers.GenerateToken(user.ID.Hex())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to generate token")
+		return
+	}
+
 	// Create auth response
 	response := models.AuthResponse{
 		User:  user,
-		Token: "dummy_token_123", // TODO: Replace with actual JWT token
+		Token: token,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

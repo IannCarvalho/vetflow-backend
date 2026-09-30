@@ -153,65 +153,6 @@ func (c *ClientController) GetAll(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(clients)
 }
 
-// GetAllPublic godoc (PUBLIC - NO AUTH REQUIRED)
-// @Summary List all clients (public)
-// @Description Retrieve all registered clients (public endpoint)
-// @Tags Clients
-// @Accept json
-// @Produce json
-// @Success 200 {array} models.Client
-// @Failure 500 {object} map[string]string "Server error"
-// @Router /clients [get]
-func (c *ClientController) GetAllPublic(w http.ResponseWriter, r *http.Request) {
-	clients, err := c.repo.FindAll(r.Context())
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar todos os clientes", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-
-	if clients == nil {
-		clients = make([]*models.Client, 0)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(clients)
-}
-
-// GetByIDPublic godoc (PUBLIC - NO AUTH REQUIRED)
-// @Summary Get client by ID (public)
-// @Description Get a specific client by their ID (public endpoint)
-// @Tags Clients
-// @Accept json
-// @Produce json
-// @Param id path string true "Client ID"
-// @Success 200 {object} models.Client
-// @Failure 400 {object} map[string]string "Invalid ID"
-// @Failure 404 {object} map[string]string "Client not found"
-// @Failure 500 {object} map[string]string "Server error"
-// @Router /clients/{id} [get]
-func (c *ClientController) GetByIDPublic(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de cliente inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
-		return
-	}
-
-	client, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar cliente", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-
-	if client == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Cliente não encontrado", "Nenhum cliente com este ID existe no banco de dados", "CLIENT_NOT_FOUND")
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(client)
-}
-
 // Update godoc
 // @Summary Update client
 // @Description Update an existing client
