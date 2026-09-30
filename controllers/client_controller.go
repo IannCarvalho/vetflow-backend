@@ -20,6 +20,7 @@ type ClientController struct {
 	prescriptionRepo repositories.PrescriptionRepository
 	invoiceRepo      repositories.InvoiceRepository
 	appointmentRepo  repositories.AppointmentRepository
+	attachmentRepo   repositories.AttachmentRepository
 }
 
 // NewClientController creates a new client controller with dependency injection
@@ -31,6 +32,7 @@ func NewClientController(
 	prescriptionRepo repositories.PrescriptionRepository,
 	invoiceRepo repositories.InvoiceRepository,
 	appointmentRepo repositories.AppointmentRepository,
+	attachmentRepo repositories.AttachmentRepository,
 ) *ClientController {
 	return &ClientController{
 		repo:             repo,
@@ -40,6 +42,7 @@ func NewClientController(
 		prescriptionRepo: prescriptionRepo,
 		invoiceRepo:      invoiceRepo,
 		appointmentRepo:  appointmentRepo,
+		attachmentRepo:   attachmentRepo,
 	}
 }
 
@@ -300,6 +303,10 @@ func (c *ClientController) Delete(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := c.appointmentRepo.DeleteByPetID(r.Context(), pet.ID); err != nil {
 			writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao deletar agendamentos do pet", err.Error(), "DB_DELETE_ERROR")
+			return
+		}
+		if err := c.attachmentRepo.DeleteByPetID(r.Context(), pet.ID); err != nil {
+			writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao deletar anexos do pet", err.Error(), "DB_DELETE_ERROR")
 			return
 		}
 	}

@@ -65,6 +65,18 @@ type PrescriptionRepository interface {
 	DeleteByPetID(ctx context.Context, petID primitive.ObjectID) error
 }
 
+// AttachmentRepository defines operations for attachment (exams/files) data
+type AttachmentRepository interface {
+	Create(ctx context.Context, attachment *models.Attachment) error
+	FindByID(ctx context.Context, id primitive.ObjectID) (*models.Attachment, error)
+	// FindSummariesByPetID lists attachments for a pet WITHOUT the heavy base64
+	// content, so listings stay lightweight.
+	FindSummariesByPetID(ctx context.Context, petID primitive.ObjectID) ([]*models.AttachmentSummary, error)
+	Update(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) error
+	Delete(ctx context.Context, id primitive.ObjectID) error
+	DeleteByPetID(ctx context.Context, petID primitive.ObjectID) error
+}
+
 // CatalogItemRepository defines operations for catalog (services/products) data
 type CatalogItemRepository interface {
 	Create(ctx context.Context, item *models.CatalogItem) error
