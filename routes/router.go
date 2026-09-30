@@ -45,6 +45,7 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 	vaccineRepo := repositories.NewVaccineRepository(db.Collection("vaccines"))
 	userRepo := repositories.NewUserRepository(db.Collection("users"))
 	prescriptionRepo := repositories.NewPrescriptionRepository(db.Collection("prescriptions"))
+	catalogRepo := repositories.NewCatalogItemRepository(db.Collection("catalog_items"))
 	notificationRepo := repositories.NewNotificationRepository(db)
 
 	// Initialize services
@@ -61,6 +62,7 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 	oauthCallbackController := controllers.NewOAuthCallbackController(userRepo)
 	notificationController := controllers.NewNotificationController(notificationService)
 	prescriptionController := controllers.NewPrescriptionController(prescriptionRepo)
+	catalogController := controllers.NewCatalogItemController(catalogRepo)
 
 	// Health check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -146,6 +148,16 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 		r.Get("/{id}", prescriptionController.GetByID)
 		r.Put("/{id}", prescriptionController.Update)
 		r.Delete("/{id}", prescriptionController.Delete)
+	})
+
+	// Catalog routes (fully protected - o catálogo é privado do vet)
+	r.Route("/catalog", func(r chi.Router) {
+		r.Use(AuthMiddleware)
+		r.Get("/", catalogController.GetAll)
+		r.Post("/", catalogController.Create)
+		r.Get("/{id}", catalogController.GetByID)
+		r.Put("/{id}", catalogController.Update)
+		r.Delete("/{id}", catalogController.Delete)
 	})
 
 	// Notification routes (protected)
