@@ -18,6 +18,7 @@ type ClientController struct {
 	consultationRepo repositories.ConsultationRepository
 	vaccineRepo      repositories.VaccineRepository
 	prescriptionRepo repositories.PrescriptionRepository
+	invoiceRepo      repositories.InvoiceRepository
 }
 
 // NewClientController creates a new client controller with dependency injection
@@ -27,6 +28,7 @@ func NewClientController(
 	consultationRepo repositories.ConsultationRepository,
 	vaccineRepo repositories.VaccineRepository,
 	prescriptionRepo repositories.PrescriptionRepository,
+	invoiceRepo repositories.InvoiceRepository,
 ) *ClientController {
 	return &ClientController{
 		repo:             repo,
@@ -34,6 +36,7 @@ func NewClientController(
 		consultationRepo: consultationRepo,
 		vaccineRepo:      vaccineRepo,
 		prescriptionRepo: prescriptionRepo,
+		invoiceRepo:      invoiceRepo,
 	}
 }
 
@@ -292,6 +295,12 @@ func (c *ClientController) Delete(w http.ResponseWriter, r *http.Request) {
 			writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao deletar receituários do pet", err.Error(), "DB_DELETE_ERROR")
 			return
 		}
+	}
+
+	// Delete all invoices for this client
+	if err := c.invoiceRepo.DeleteByClientID(r.Context(), objectID); err != nil {
+		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao deletar faturas do cliente", err.Error(), "DB_DELETE_ERROR")
+		return
 	}
 
 	// Delete all pets for this client
