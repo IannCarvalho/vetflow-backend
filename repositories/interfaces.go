@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"time"
 
 	"github.com/vetflow/veterinary-api/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -81,6 +82,19 @@ type InvoiceRepository interface {
 	FindByClientID(ctx context.Context, clientID primitive.ObjectID) ([]*models.Invoice, error)
 	Update(ctx context.Context, id primitive.ObjectID, invoice *models.Invoice) error
 	Delete(ctx context.Context, id primitive.ObjectID) error
+	DeleteByClientID(ctx context.Context, clientID primitive.ObjectID) error
+}
+
+// AppointmentRepository defines operations for appointment (agenda) data
+type AppointmentRepository interface {
+	Create(ctx context.Context, appointment *models.Appointment) error
+	FindByID(ctx context.Context, id primitive.ObjectID) (*models.Appointment, error)
+	FindByVetID(ctx context.Context, vetID primitive.ObjectID) ([]*models.Appointment, error)
+	FindByVetIDInRange(ctx context.Context, vetID primitive.ObjectID, start, end time.Time) ([]*models.Appointment, error)
+	FindByPetID(ctx context.Context, petID primitive.ObjectID) ([]*models.Appointment, error)
+	Update(ctx context.Context, id primitive.ObjectID, appointment *models.Appointment) error
+	Delete(ctx context.Context, id primitive.ObjectID) error
+	DeleteByPetID(ctx context.Context, petID primitive.ObjectID) error
 	DeleteByClientID(ctx context.Context, clientID primitive.ObjectID) error
 }
 
