@@ -48,14 +48,15 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 	catalogRepo := repositories.NewCatalogItemRepository(db.Collection("catalog_items"))
 	invoiceRepo := repositories.NewInvoiceRepository(db.Collection("invoices"))
 	appointmentRepo := repositories.NewAppointmentRepository(db.Collection("appointments"))
+	attachmentRepo := repositories.NewAttachmentRepository(db.Collection("attachments"))
 	notificationRepo := repositories.NewNotificationRepository(db)
 
 	// Initialize services
 	notificationService := services.NewNotificationService(notificationRepo, consultationRepo, vaccineRepo, petRepo)
 
 	// Initialize controllers
-	clientController := controllers.NewClientController(clientRepo, petRepo, consultationRepo, vaccineRepo, prescriptionRepo, invoiceRepo, appointmentRepo)
-	petController := controllers.NewPetController(petRepo, clientRepo, consultationRepo, vaccineRepo, prescriptionRepo, appointmentRepo)
+	clientController := controllers.NewClientController(clientRepo, petRepo, consultationRepo, vaccineRepo, prescriptionRepo, invoiceRepo, appointmentRepo, attachmentRepo)
+	petController := controllers.NewPetController(petRepo, clientRepo, consultationRepo, vaccineRepo, prescriptionRepo, appointmentRepo, attachmentRepo)
 	consultationController := controllers.NewConsultationController(consultationRepo)
 	vaccineController := controllers.NewVaccineController(vaccineRepo)
 	authController := controllers.NewAuthController(userRepo)
@@ -67,6 +68,7 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 	catalogController := controllers.NewCatalogItemController(catalogRepo)
 	invoiceController := controllers.NewInvoiceController(invoiceRepo)
 	appointmentController := controllers.NewAppointmentController(appointmentRepo)
+	attachmentController := controllers.NewAttachmentController(attachmentRepo, petRepo, clientRepo)
 
 	// Health check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -182,6 +184,16 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 		r.Get("/{id}", appointmentController.GetByID)
 		r.Put("/{id}", appointmentController.Update)
 		r.Delete("/{id}", appointmentController.Delete)
+	})
+
+	// Attachment routes (fully protected - anexos são privados do vet)
+	r.Route("/attachments", func(r chi.Router) {
+		r.Use(AuthMiddleware)
+		r.Get("/", attachmentController.GetAll)
+		r.Post("/", attachmentController.Create)
+		r.Get("/{id}/content", attachmentController.GetContent)
+		r.Put("/{id}", attachmentController.Update)
+		r.Delete("/{id}", attachmentController.Delete)
 	})
 
 	// Notification routes (protected)
