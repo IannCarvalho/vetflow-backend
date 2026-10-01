@@ -19,6 +19,7 @@ type ClientController struct {
 	vaccineRepo      repositories.VaccineRepository
 	prescriptionRepo repositories.PrescriptionRepository
 	invoiceRepo      repositories.InvoiceRepository
+	appointmentRepo  repositories.AppointmentRepository
 }
 
 // NewClientController creates a new client controller with dependency injection
@@ -29,6 +30,7 @@ func NewClientController(
 	vaccineRepo repositories.VaccineRepository,
 	prescriptionRepo repositories.PrescriptionRepository,
 	invoiceRepo repositories.InvoiceRepository,
+	appointmentRepo repositories.AppointmentRepository,
 ) *ClientController {
 	return &ClientController{
 		repo:             repo,
@@ -37,6 +39,7 @@ func NewClientController(
 		vaccineRepo:      vaccineRepo,
 		prescriptionRepo: prescriptionRepo,
 		invoiceRepo:      invoiceRepo,
+		appointmentRepo:  appointmentRepo,
 	}
 }
 
@@ -295,11 +298,21 @@ func (c *ClientController) Delete(w http.ResponseWriter, r *http.Request) {
 			writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao deletar receituários do pet", err.Error(), "DB_DELETE_ERROR")
 			return
 		}
+		if err := c.appointmentRepo.DeleteByPetID(r.Context(), pet.ID); err != nil {
+			writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao deletar agendamentos do pet", err.Error(), "DB_DELETE_ERROR")
+			return
+		}
 	}
 
 	// Delete all invoices for this client
 	if err := c.invoiceRepo.DeleteByClientID(r.Context(), objectID); err != nil {
 		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao deletar faturas do cliente", err.Error(), "DB_DELETE_ERROR")
+		return
+	}
+
+	// Delete all appointments directly linked to this client
+	if err := c.appointmentRepo.DeleteByClientID(r.Context(), objectID); err != nil {
+		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao deletar agendamentos do cliente", err.Error(), "DB_DELETE_ERROR")
 		return
 	}
 

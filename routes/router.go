@@ -47,14 +47,15 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 	prescriptionRepo := repositories.NewPrescriptionRepository(db.Collection("prescriptions"))
 	catalogRepo := repositories.NewCatalogItemRepository(db.Collection("catalog_items"))
 	invoiceRepo := repositories.NewInvoiceRepository(db.Collection("invoices"))
+	appointmentRepo := repositories.NewAppointmentRepository(db.Collection("appointments"))
 	notificationRepo := repositories.NewNotificationRepository(db)
 
 	// Initialize services
 	notificationService := services.NewNotificationService(notificationRepo, consultationRepo, vaccineRepo, petRepo)
 
 	// Initialize controllers
-	clientController := controllers.NewClientController(clientRepo, petRepo, consultationRepo, vaccineRepo, prescriptionRepo, invoiceRepo)
-	petController := controllers.NewPetController(petRepo, clientRepo, consultationRepo, vaccineRepo, prescriptionRepo)
+	clientController := controllers.NewClientController(clientRepo, petRepo, consultationRepo, vaccineRepo, prescriptionRepo, invoiceRepo, appointmentRepo)
+	petController := controllers.NewPetController(petRepo, clientRepo, consultationRepo, vaccineRepo, prescriptionRepo, appointmentRepo)
 	consultationController := controllers.NewConsultationController(consultationRepo)
 	vaccineController := controllers.NewVaccineController(vaccineRepo)
 	authController := controllers.NewAuthController(userRepo)
@@ -65,6 +66,7 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 	prescriptionController := controllers.NewPrescriptionController(prescriptionRepo)
 	catalogController := controllers.NewCatalogItemController(catalogRepo)
 	invoiceController := controllers.NewInvoiceController(invoiceRepo)
+	appointmentController := controllers.NewAppointmentController(appointmentRepo)
 
 	// Health check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -170,6 +172,16 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 		r.Get("/{id}", invoiceController.GetByID)
 		r.Put("/{id}", invoiceController.Update)
 		r.Delete("/{id}", invoiceController.Delete)
+	})
+
+	// Appointment routes (fully protected - the agenda is private to the vet)
+	r.Route("/appointments", func(r chi.Router) {
+		r.Use(AuthMiddleware)
+		r.Get("/", appointmentController.GetAll)
+		r.Post("/", appointmentController.Create)
+		r.Get("/{id}", appointmentController.GetByID)
+		r.Put("/{id}", appointmentController.Update)
+		r.Delete("/{id}", appointmentController.Delete)
 	})
 
 	// Notification routes (protected)
