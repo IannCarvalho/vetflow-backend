@@ -64,6 +64,15 @@ type PrescriptionRepository interface {
 	DeleteByPetID(ctx context.Context, petID primitive.ObjectID) error
 }
 
+// CatalogItemRepository defines operations for catalog (services/products) data
+type CatalogItemRepository interface {
+	Create(ctx context.Context, item *models.CatalogItem) error
+	FindByID(ctx context.Context, id primitive.ObjectID) (*models.CatalogItem, error)
+	FindByVetID(ctx context.Context, vetID primitive.ObjectID) ([]*models.CatalogItem, error)
+	Update(ctx context.Context, id primitive.ObjectID, item *models.CatalogItem) error
+	Delete(ctx context.Context, id primitive.ObjectID) error
+}
+
 // NotificationRepository defines operations for notification data
 type NotificationRepository interface {
 	Create(ctx context.Context, notification *models.Notification) error
