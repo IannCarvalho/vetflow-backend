@@ -73,6 +73,17 @@ type CatalogItemRepository interface {
 	Delete(ctx context.Context, id primitive.ObjectID) error
 }
 
+// InvoiceRepository defines operations for invoice (financeiro) data
+type InvoiceRepository interface {
+	Create(ctx context.Context, invoice *models.Invoice) error
+	FindByID(ctx context.Context, id primitive.ObjectID) (*models.Invoice, error)
+	FindByVetID(ctx context.Context, vetID primitive.ObjectID) ([]*models.Invoice, error)
+	FindByClientID(ctx context.Context, clientID primitive.ObjectID) ([]*models.Invoice, error)
+	Update(ctx context.Context, id primitive.ObjectID, invoice *models.Invoice) error
+	Delete(ctx context.Context, id primitive.ObjectID) error
+	DeleteByClientID(ctx context.Context, clientID primitive.ObjectID) error
+}
+
 // NotificationRepository defines operations for notification data
 type NotificationRepository interface {
 	Create(ctx context.Context, notification *models.Notification) error

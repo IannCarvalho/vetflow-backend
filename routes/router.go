@@ -46,13 +46,14 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 	userRepo := repositories.NewUserRepository(db.Collection("users"))
 	prescriptionRepo := repositories.NewPrescriptionRepository(db.Collection("prescriptions"))
 	catalogRepo := repositories.NewCatalogItemRepository(db.Collection("catalog_items"))
+	invoiceRepo := repositories.NewInvoiceRepository(db.Collection("invoices"))
 	notificationRepo := repositories.NewNotificationRepository(db)
 
 	// Initialize services
 	notificationService := services.NewNotificationService(notificationRepo, consultationRepo, vaccineRepo, petRepo)
 
 	// Initialize controllers
-	clientController := controllers.NewClientController(clientRepo, petRepo, consultationRepo, vaccineRepo, prescriptionRepo)
+	clientController := controllers.NewClientController(clientRepo, petRepo, consultationRepo, vaccineRepo, prescriptionRepo, invoiceRepo)
 	petController := controllers.NewPetController(petRepo, clientRepo, consultationRepo, vaccineRepo, prescriptionRepo)
 	consultationController := controllers.NewConsultationController(consultationRepo)
 	vaccineController := controllers.NewVaccineController(vaccineRepo)
@@ -63,6 +64,7 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 	notificationController := controllers.NewNotificationController(notificationService)
 	prescriptionController := controllers.NewPrescriptionController(prescriptionRepo)
 	catalogController := controllers.NewCatalogItemController(catalogRepo)
+	invoiceController := controllers.NewInvoiceController(invoiceRepo)
 
 	// Health check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -158,6 +160,16 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 		r.Get("/{id}", catalogController.GetByID)
 		r.Put("/{id}", catalogController.Update)
 		r.Delete("/{id}", catalogController.Delete)
+	})
+
+	// Invoice routes (fully protected - o financeiro é privado do vet)
+	r.Route("/invoices", func(r chi.Router) {
+		r.Use(AuthMiddleware)
+		r.Get("/", invoiceController.GetAll)
+		r.Post("/", invoiceController.Create)
+		r.Get("/{id}", invoiceController.GetByID)
+		r.Put("/{id}", invoiceController.Update)
+		r.Delete("/{id}", invoiceController.Delete)
 	})
 
 	// Notification routes (protected)
