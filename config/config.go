@@ -15,6 +15,18 @@ type Config struct {
 	Port      string
 	AppEnv    string
 	JWTSecret string
+
+	// Email/SMTP settings for outbound notification e-mails. When SMTPHost is
+	// empty, the mailer runs in "log only" mode (no real e-mail is sent).
+	SMTPHost string
+	SMTPPort string
+	SMTPUser string
+	SMTPPass string
+	SMTPFrom string
+	FromName string
+
+	// Daily notification scheduler.
+	EmailNotificationsEnabled bool
 }
 
 // IsProduction reports whether the app is running in a production environment.
@@ -34,10 +46,20 @@ func LoadConfig() *Config {
 		Port:      getEnv("PORT", "8080"),
 		AppEnv:    getEnv("APP_ENV", "development"),
 		JWTSecret: os.Getenv("JWT_SECRET"),
+
+		SMTPHost: os.Getenv("SMTP_HOST"),
+		SMTPPort: getEnv("SMTP_PORT", "587"),
+		SMTPUser: os.Getenv("SMTP_USER"),
+		SMTPPass: os.Getenv("SMTP_PASS"),
+		SMTPFrom: os.Getenv("SMTP_FROM"),
+		FromName: getEnv("SMTP_FROM_NAME", "VetFlow"),
+
+		EmailNotificationsEnabled: getEnv("EMAIL_NOTIFICATIONS_ENABLED", "true") == "true",
 	}
 
-	log.Printf("Config loaded - MONGO_URI: %s (len=%d), PORT: %s, APP_ENV: %s",
-		maskPassword(config.MongoURI), len(config.MongoURI), config.Port, config.AppEnv)
+	log.Printf("Config loaded - MONGO_URI: %s (len=%d), PORT: %s, APP_ENV: %s, SMTP configured: %t, email notifications: %t",
+		maskPassword(config.MongoURI), len(config.MongoURI), config.Port, config.AppEnv,
+		config.SMTPHost != "", config.EmailNotificationsEnabled)
 
 	return config
 }

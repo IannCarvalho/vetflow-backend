@@ -18,6 +18,7 @@ type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (*models.User, error)
 	FindByID(ctx context.Context, id string) (*models.User, error)
 	FindByObjectID(ctx context.Context, id primitive.ObjectID) (*models.User, error)
+	FindAll(ctx context.Context) ([]*models.User, error)
 	UpdateUser(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) (*models.User, error)
 }
 
@@ -84,6 +85,21 @@ func (r *UserRepositoryImpl) FindByID(ctx context.Context, id string) (*models.U
 		return nil, err
 	}
 	return &user, nil
+}
+
+// FindAll returns all users (vets). Used by the notification scheduler.
+func (r *UserRepositoryImpl) FindAll(ctx context.Context) ([]*models.User, error) {
+	cursor, err := r.collection.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var users []*models.User
+	if err = cursor.All(ctx, &users); err != nil {
+		return nil, err
+	}
+	return users, nil
 }
 
 // FindByObjectID finds a user by ObjectID

@@ -19,13 +19,18 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/vetflow/veterinary-api/config"
 	"github.com/vetflow/veterinary-api/db"
+	"github.com/vetflow/veterinary-api/helpers"
+	"github.com/vetflow/veterinary-api/repositories"
 	"github.com/vetflow/veterinary-api/routes"
+	"github.com/vetflow/veterinary-api/services"
 )
 
 func main() {
@@ -73,6 +78,33 @@ func main() {
 	log.Println("[MAIN] Creating router...")
 	router := routes.NewRouter(database)
 	log.Println("[MAIN] Router created successfully")
+
+	// Start the daily e-mail notification scheduler (non-blocking).
+	if cfg.EmailNotificationsEnabled {
+		log.Println("[MAIN] Starting notification scheduler...")
+		notificationRepo := repositories.NewNotificationRepository(database)
+		consultationRepo := repositories.NewConsultationRepository(database.Collection("consultations"))
+		vaccineRepo := repositories.NewVaccineRepository(database.Collection("vaccines"))
+		petRepo := repositories.NewPetRepository(database.Collection("pets"))
+		userRepo := repositories.NewUserRepository(database.Collection("users"))
+
+		notificationService := services.NewNotificationService(notificationRepo, consultationRepo, vaccineRepo, petRepo)
+		mailer := helpers.NewMailer(helpers.EmailConfig{
+			Host:     cfg.SMTPHost,
+			Port:     cfg.SMTPPort,
+			User:     cfg.SMTPUser,
+			Pass:     cfg.SMTPPass,
+			From:     cfg.SMTPFrom,
+			FromName: cfg.FromName,
+		})
+
+		scheduler := services.NewNotificationScheduler(
+			notificationService, notificationRepo, userRepo, mailer, 24*time.Hour,
+		)
+		scheduler.Start(context.Background())
+	} else {
+		log.Println("[MAIN] Email notifications disabled (EMAIL_NOTIFICATIONS_ENABLED=false)")
+	}
 
 	// Start server
 	addr := ":" + cfg.Port
