@@ -35,6 +35,12 @@ func NewConsultationController(repo repositories.ConsultationRepository) *Consul
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /consultations [post]
 func (c *ConsultationController) Create(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
 	var consultation models.Consultation
 	if err := json.NewDecoder(r.Body).Decode(&consultation); err != nil {
 		writeErrorWithDetails(w, http.StatusBadRequest, "Falha ao decodificar corpo da requisição", err.Error(), "INVALID_JSON")
@@ -46,6 +52,9 @@ func (c *ConsultationController) Create(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Scope the consultation to the authenticated vet so listing by vet works
+	// and records cannot be attributed to another vet by the client.
+	consultation.VetID = userID
 	consultation.CreatedAt = time.Now()
 
 	if err := c.repo.Create(r.Context(), &consultation); err != nil {
@@ -116,55 +125,6 @@ func (c *ConsultationController) GetAll(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(consultations)
 }
 
-// GetAllPublic godoc (PUBLIC - NO AUTH REQUIRED)
-// @Summary List consultations (public)
-// @Description List all consultations, optionally filtered by pet_id
-// @Tags Consultations
-// @Accept json
-// @Produce json
-// @Param pet_id query string false "Pet ID to filter consultations"
-// @Success 200 {array} models.Consultation
-// @Failure 400 {object} map[string]string "Invalid input"
-// @Failure 500 {object} map[string]string "Server error"
-// @Router /consultations [get]
-func (c *ConsultationController) GetAllPublic(w http.ResponseWriter, r *http.Request) {
-	// When a pet_id filter is provided, return only that pet's consultations.
-	if petID := r.URL.Query().Get("pet_id"); petID != "" {
-		objectID, err := primitive.ObjectIDFromHex(petID)
-		if err != nil {
-			writeErrorWithDetails(w, http.StatusBadRequest, "Formato de pet_id inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_PET_ID_FORMAT")
-			return
-		}
-
-		consultations, err := c.repo.FindByPetID(r.Context(), objectID)
-		if err != nil {
-			writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar consultas do banco de dados", err.Error(), "DB_QUERY_ERROR")
-			return
-		}
-
-		if consultations == nil {
-			consultations = make([]*models.Consultation, 0)
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(consultations)
-		return
-	}
-
-	consultations, err := c.repo.FindAll(r.Context())
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar todas as consultas", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-
-	if consultations == nil {
-		consultations = make([]*models.Consultation, 0)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(consultations)
-}
-
 // GetByID godoc
 // @Summary Get consultation by ID
 // @Description Get a specific consultation by ID
@@ -178,6 +138,12 @@ func (c *ConsultationController) GetAllPublic(w http.ResponseWriter, r *http.Req
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /consultations/{id} [get]
 func (c *ConsultationController) GetByID(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
 	id := chi.URLParam(r, "id")
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -196,36 +162,17 @@ func (c *ConsultationController) GetByID(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Only expose consultations that belong to the authenticated vet. Legacy
+	// records with a zero VetID remain visible until re-saved.
+	if !consultation.VetID.IsZero() {
+		if err := validateResourceOwnership(consultation.VetID, userID); err != nil {
+			writeError(w, http.StatusForbidden, err.Error())
+			return
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(consultation)
-}
-
-// GetByPetID handles GET /consultations?pet_id={petId}
-func (c *ConsultationController) GetByPetID(w http.ResponseWriter, r *http.Request) {
-	petID := r.URL.Query().Get("pet_id")
-	if petID == "" {
-		writeError(w, http.StatusBadRequest, "pet_id query parameter is required")
-		return
-	}
-
-	objectID, err := primitive.ObjectIDFromHex(petID)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid pet_id format")
-		return
-	}
-
-	consultations, err := c.repo.FindByPetID(r.Context(), objectID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "Failed to retrieve consultations")
-		return
-	}
-
-	if consultations == nil {
-		consultations = make([]*models.Consultation, 0)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(consultations)
 }
 
 // Update godoc
@@ -242,11 +189,36 @@ func (c *ConsultationController) GetByPetID(w http.ResponseWriter, r *http.Reque
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /consultations/{id} [put]
 func (c *ConsultationController) Update(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
 	id := chi.URLParam(r, "id")
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de consulta inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
 		return
+	}
+
+	// Ensure the consultation exists and belongs to the authenticated vet.
+	existing, err := c.repo.FindByID(r.Context(), objectID)
+	if err != nil {
+		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar consulta", err.Error(), "DB_QUERY_ERROR")
+		return
+	}
+	if existing == nil {
+		writeErrorWithDetails(w, http.StatusNotFound, "Consulta não encontrada", "Nenhuma consulta com este ID existe no banco de dados", "CONSULTATION_NOT_FOUND")
+		return
+	}
+	// Records created before vet-scoping may have a zero VetID; allow those to
+	// be claimed, but block editing another vet's consultation.
+	if !existing.VetID.IsZero() {
+		if err := validateResourceOwnership(existing.VetID, userID); err != nil {
+			writeError(w, http.StatusForbidden, err.Error())
+			return
+		}
 	}
 
 	var consultation models.Consultation
@@ -261,6 +233,7 @@ func (c *ConsultationController) Update(w http.ResponseWriter, r *http.Request) 
 	}
 
 	consultation.ID = objectID
+	consultation.VetID = userID
 
 	if err := c.repo.Update(r.Context(), objectID, &consultation); err != nil {
 		if err == mongo.ErrNoDocuments {

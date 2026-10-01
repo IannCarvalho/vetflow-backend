@@ -96,52 +96,44 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 		httpSwagger.URL("/swagger/doc.json"),
 	))
 
-	// Client routes (GET public, write protected)
+	// Client routes (fully protected and scoped to the authenticated vet)
 	r.Route("/clients", func(r chi.Router) {
-		// GET endpoints are public (read-only) - use Public versions
-		r.Get("/", clientController.GetAllPublic)
-		r.Get("/{id}", clientController.GetByIDPublic)
-
-		// POST/PUT/DELETE endpoints are protected
-		r.With(AuthMiddleware).Post("/", clientController.Create)
-		r.With(AuthMiddleware).Put("/{id}", clientController.Update)
-		r.With(AuthMiddleware).Delete("/{id}", clientController.Delete)
+		r.Use(AuthMiddleware)
+		r.Get("/", clientController.GetAll)
+		r.Get("/{id}", clientController.GetByID)
+		r.Post("/", clientController.Create)
+		r.Put("/{id}", clientController.Update)
+		r.Delete("/{id}", clientController.Delete)
 	})
 
-	// Pet routes (GET public, write protected)
+	// Pet routes (fully protected and scoped to the authenticated vet)
 	r.Route("/pets", func(r chi.Router) {
-		// GET endpoints are public (read-only) - use Public versions
-		r.Get("/", petController.GetAllPublic)
-		r.Get("/{id}", petController.GetByIDPublic)
-
-		// POST/PUT/DELETE endpoints are protected
-		r.With(AuthMiddleware).Post("/", petController.Create)
-		r.With(AuthMiddleware).Put("/{id}", petController.Update)
-		r.With(AuthMiddleware).Delete("/{id}", petController.Delete)
+		r.Use(AuthMiddleware)
+		r.Get("/", petController.GetAll)
+		r.Get("/{id}", petController.GetByID)
+		r.Post("/", petController.Create)
+		r.Put("/{id}", petController.Update)
+		r.Delete("/{id}", petController.Delete)
 	})
 
-	// Consultation routes (GET public, write protected)
+	// Consultation routes (fully protected and scoped to the authenticated vet)
 	r.Route("/consultations", func(r chi.Router) {
-		// GET endpoints are public (read-only)
-		r.Get("/", consultationController.GetAllPublic)
+		r.Use(AuthMiddleware)
+		r.Get("/", consultationController.GetAll)
 		r.Get("/{id}", consultationController.GetByID)
-
-		// POST/PUT/DELETE endpoints are protected
-		r.With(AuthMiddleware).Post("/", consultationController.Create)
-		r.With(AuthMiddleware).Put("/{id}", consultationController.Update)
-		r.With(AuthMiddleware).Delete("/{id}", consultationController.Delete)
+		r.Post("/", consultationController.Create)
+		r.Put("/{id}", consultationController.Update)
+		r.Delete("/{id}", consultationController.Delete)
 	})
 
-	// Vaccine routes (GET public, write protected)
+	// Vaccine routes (fully protected and scoped to the authenticated vet)
 	r.Route("/vaccines", func(r chi.Router) {
-		// GET endpoints are public (read-only) - use Public versions
-		r.Get("/", vaccineController.GetAllPublic)
-		r.Get("/{id}", vaccineController.GetByIDPublic)
-
-		// POST/PUT/DELETE endpoints are protected
-		r.With(AuthMiddleware).Post("/", vaccineController.Create)
-		r.With(AuthMiddleware).Put("/{id}", vaccineController.Update)
-		r.With(AuthMiddleware).Delete("/{id}", vaccineController.Delete)
+		r.Use(AuthMiddleware)
+		r.Get("/", vaccineController.GetAll)
+		r.Get("/{id}", vaccineController.GetByID)
+		r.Post("/", vaccineController.Create)
+		r.Put("/{id}", vaccineController.Update)
+		r.Delete("/{id}", vaccineController.Delete)
 	})
 
 	// Notification routes (protected)

@@ -169,38 +169,26 @@ func (c *PetController) GetAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var pets []*models.Pet
-
-	pets, err = c.repo.FindByVetID(r.Context(), userID)
-
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "Failed to retrieve pets")
-		return
-	}
-
-	if pets == nil {
-		pets = make([]*models.Pet, 0)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(pets)
-}
-
-// GetAllPublic godoc (PUBLIC - NO AUTH REQUIRED)
-// @Summary List all pets (public)
-// @Description Retrieve all pets (public endpoint)
-// @Tags Pets
-// @Accept json
-// @Produce json
-// @Success 200 {array} models.Pet
-// @Failure 500 {object} map[string]string "Server error"
-// @Router /pets [get]
-func (c *PetController) GetAllPublic(w http.ResponseWriter, r *http.Request) {
-	// When an owner_id filter is provided, return only that client's pets.
+	// When an owner_id filter is provided, return only that client's pets,
+	// but only after confirming the client belongs to the authenticated vet.
 	if ownerID := r.URL.Query().Get("owner_id"); ownerID != "" {
 		objectID, err := primitive.ObjectIDFromHex(ownerID)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, "Invalid owner_id format")
+			return
+		}
+
+		client, err := c.clientRepo.FindByID(r.Context(), objectID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "Failed to verify client ownership")
+			return
+		}
+		if client == nil {
+			writeError(w, http.StatusNotFound, "Client not found")
+			return
+		}
+		if err := validateResourceOwnership(client.VetID, userID); err != nil {
+			writeError(w, http.StatusForbidden, "Access denied")
 			return
 		}
 
@@ -209,7 +197,6 @@ func (c *PetController) GetAllPublic(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, "Failed to retrieve pets")
 			return
 		}
-
 		if pets == nil {
 			pets = make([]*models.Pet, 0)
 		}
@@ -219,8 +206,7 @@ func (c *PetController) GetAllPublic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pets, err := c.repo.FindAll(r.Context())
-
+	pets, err := c.repo.FindByVetID(r.Context(), userID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Failed to retrieve pets")
 		return
@@ -232,41 +218,6 @@ func (c *PetController) GetAllPublic(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(pets)
-}
-
-// GetByIDPublic godoc (PUBLIC - NO AUTH REQUIRED)
-// @Summary Get pet by ID (public)
-// @Description Get a specific pet by their ID (public endpoint)
-// @Tags Pets
-// @Accept json
-// @Produce json
-// @Param id path string true "Pet ID"
-// @Success 200 {object} models.Pet
-// @Failure 400 {object} map[string]string "Invalid ID"
-// @Failure 404 {object} map[string]string "Pet not found"
-// @Failure 500 {object} map[string]string "Server error"
-// @Router /pets/{id} [get]
-func (c *PetController) GetByIDPublic(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid pet ID")
-		return
-	}
-
-	pet, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "Failed to retrieve pet")
-		return
-	}
-
-	if pet == nil {
-		writeError(w, http.StatusNotFound, "Pet not found")
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(pet)
 }
 
 // Update godoc
