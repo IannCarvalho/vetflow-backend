@@ -176,6 +176,84 @@ func (c *ConsultationController) GetByID(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(consultation)
 }
 
+// PrescriptionDraft godoc
+// @Summary Build a prescription draft from a consultation
+// @Description Returns an unsaved prescription (receituário) pre-filled from the consultation: pet_id, consultation_id, today's date and general notes seeded from the main complaint and any medications noted in the summary. The client edits it and persists it with POST /prescriptions. Must belong to the authenticated vet.
+// @Tags Consultations
+// @Accept json
+// @Produce json
+// @Param id path string true "Consultation ID"
+// @Success 200 {object} models.Prescription
+// @Failure 400 {object} map[string]string "Invalid ID"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Consultation not found"
+// @Failure 500 {object} map[string]string "Server error"
+// @Router /consultations/{id}/prescription-draft [get]
+func (c *ConsultationController) PrescriptionDraft(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	objectID, err := primitive.ObjectIDFromHex(chi.URLParam(r, "id"))
+	if err != nil {
+		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de consulta inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+		return
+	}
+
+	consultation, err := c.repo.FindByID(r.Context(), objectID)
+	if err != nil {
+		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar consulta", err.Error(), "DB_QUERY_ERROR")
+		return
+	}
+	if consultation == nil {
+		writeErrorWithDetails(w, http.StatusNotFound, "Consulta não encontrada", "Nenhuma consulta com este ID existe no banco de dados", "CONSULTATION_NOT_FOUND")
+		return
+	}
+	// Legacy records with a zero VetID remain accessible; otherwise block drafting
+	// from another vet's consultation.
+	if !consultation.VetID.IsZero() {
+		if err := validateResourceOwnership(consultation.VetID, userID); err != nil {
+			writeError(w, http.StatusForbidden, err.Error())
+			return
+		}
+	}
+
+	draft := buildPrescriptionDraft(consultation)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(draft)
+}
+
+// buildPrescriptionDraft assembles an unsaved prescription seeded from a
+// consultation. It intentionally leaves the ID and VetID zero: the draft is not
+// persisted here, and POST /prescriptions sets VetID from the token on save. A
+// single empty item is included so the client has a row to start editing.
+func buildPrescriptionDraft(consultation *models.Consultation) models.Prescription {
+	var notes strings.Builder
+	if complaint := strings.TrimSpace(consultation.Anamnesis.MainComplaint); complaint != "" {
+		notes.WriteString("Queixa principal: ")
+		notes.WriteString(complaint)
+	}
+	if meds := strings.TrimSpace(consultation.Summary.Medications); meds != "" {
+		if notes.Len() > 0 {
+			notes.WriteString("\n")
+		}
+		notes.WriteString("Medicações em uso: ")
+		notes.WriteString(meds)
+	}
+
+	return models.Prescription{
+		PetID:          consultation.PetID,
+		ConsultationID: consultation.ID,
+		Date:           time.Now(),
+		Items:          []models.PrescriptionItem{{}},
+		GeneralNotes:   notes.String(),
+	}
+}
+
 // Update godoc
 // @Summary Update consultation
 // @Description Update an existing consultation

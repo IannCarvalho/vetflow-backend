@@ -177,6 +177,7 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 		r.Use(AuthMiddleware)
 		r.Get("/", consultationController.GetAll)
 		r.Get("/{id}", consultationController.GetByID)
+		r.Get("/{id}/prescription-draft", consultationController.PrescriptionDraft)
 		r.Post("/", consultationController.Create)
 		r.Put("/{id}", consultationController.Update)
 		r.Delete("/{id}", consultationController.Delete)
