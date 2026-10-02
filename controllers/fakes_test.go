@@ -416,29 +416,133 @@ func (r *fakeConsultationRepo) DeleteByPetID(_ context.Context, petID primitive.
 	return nil
 }
 
-// --- Prescription (satisfies the interface; no exercised logic) ---
+// --- Prescription (map-backed so FindByVetID returns real counts) ---
 
-type fakePrescriptionRepo struct{}
+type fakePrescriptionRepo struct {
+	items map[primitive.ObjectID]*models.Prescription
+}
 
 var _ repositories.PrescriptionRepository = (*fakePrescriptionRepo)(nil)
 
-func newFakePrescriptionRepo() *fakePrescriptionRepo { return &fakePrescriptionRepo{} }
+func newFakePrescriptionRepo() *fakePrescriptionRepo {
+	return &fakePrescriptionRepo{items: make(map[primitive.ObjectID]*models.Prescription)}
+}
 
-func (r *fakePrescriptionRepo) Create(context.Context, *models.Prescription) error { return nil }
-func (r *fakePrescriptionRepo) FindByID(context.Context, primitive.ObjectID) (*models.Prescription, error) {
-	return nil, nil
-}
-func (r *fakePrescriptionRepo) FindByVetID(context.Context, primitive.ObjectID) ([]*models.Prescription, error) {
-	return nil, nil
-}
-func (r *fakePrescriptionRepo) FindByPetID(context.Context, primitive.ObjectID) ([]*models.Prescription, error) {
-	return nil, nil
-}
-func (r *fakePrescriptionRepo) Update(context.Context, primitive.ObjectID, *models.Prescription) error {
+func (r *fakePrescriptionRepo) Create(_ context.Context, prescription *models.Prescription) error {
+	if prescription.ID.IsZero() {
+		prescription.ID = primitive.NewObjectID()
+	}
+	stored := *prescription
+	r.items[prescription.ID] = &stored
 	return nil
 }
-func (r *fakePrescriptionRepo) Delete(context.Context, primitive.ObjectID) error      { return nil }
-func (r *fakePrescriptionRepo) DeleteByPetID(context.Context, primitive.ObjectID) error { return nil }
+func (r *fakePrescriptionRepo) FindByID(_ context.Context, id primitive.ObjectID) (*models.Prescription, error) {
+	prescription, ok := r.items[id]
+	if !ok {
+		return nil, nil
+	}
+	copied := *prescription
+	return &copied, nil
+}
+func (r *fakePrescriptionRepo) FindByVetID(_ context.Context, vetID primitive.ObjectID) ([]*models.Prescription, error) {
+	out := make([]*models.Prescription, 0)
+	for _, p := range r.items {
+		if p.VetID == vetID {
+			copied := *p
+			out = append(out, &copied)
+		}
+	}
+	return out, nil
+}
+func (r *fakePrescriptionRepo) FindByPetID(_ context.Context, petID primitive.ObjectID) ([]*models.Prescription, error) {
+	out := make([]*models.Prescription, 0)
+	for _, p := range r.items {
+		if p.PetID == petID {
+			copied := *p
+			out = append(out, &copied)
+		}
+	}
+	return out, nil
+}
+func (r *fakePrescriptionRepo) Update(_ context.Context, id primitive.ObjectID, prescription *models.Prescription) error {
+	if _, ok := r.items[id]; !ok {
+		return mongo.ErrNoDocuments
+	}
+	stored := *prescription
+	stored.ID = id
+	r.items[id] = &stored
+	return nil
+}
+func (r *fakePrescriptionRepo) Delete(_ context.Context, id primitive.ObjectID) error {
+	if _, ok := r.items[id]; !ok {
+		return mongo.ErrNoDocuments
+	}
+	delete(r.items, id)
+	return nil
+}
+func (r *fakePrescriptionRepo) DeleteByPetID(_ context.Context, petID primitive.ObjectID) error {
+	for id, p := range r.items {
+		if p.PetID == petID {
+			delete(r.items, id)
+		}
+	}
+	return nil
+}
+
+// --- CatalogItem (map-backed so FindByVetID returns real counts) ---
+
+type fakeCatalogItemRepo struct {
+	items map[primitive.ObjectID]*models.CatalogItem
+}
+
+var _ repositories.CatalogItemRepository = (*fakeCatalogItemRepo)(nil)
+
+func newFakeCatalogItemRepo() *fakeCatalogItemRepo {
+	return &fakeCatalogItemRepo{items: make(map[primitive.ObjectID]*models.CatalogItem)}
+}
+
+func (r *fakeCatalogItemRepo) Create(_ context.Context, item *models.CatalogItem) error {
+	if item.ID.IsZero() {
+		item.ID = primitive.NewObjectID()
+	}
+	stored := *item
+	r.items[item.ID] = &stored
+	return nil
+}
+func (r *fakeCatalogItemRepo) FindByID(_ context.Context, id primitive.ObjectID) (*models.CatalogItem, error) {
+	item, ok := r.items[id]
+	if !ok {
+		return nil, nil
+	}
+	copied := *item
+	return &copied, nil
+}
+func (r *fakeCatalogItemRepo) FindByVetID(_ context.Context, vetID primitive.ObjectID) ([]*models.CatalogItem, error) {
+	out := make([]*models.CatalogItem, 0)
+	for _, it := range r.items {
+		if it.VetID == vetID {
+			copied := *it
+			out = append(out, &copied)
+		}
+	}
+	return out, nil
+}
+func (r *fakeCatalogItemRepo) Update(_ context.Context, id primitive.ObjectID, item *models.CatalogItem) error {
+	if _, ok := r.items[id]; !ok {
+		return mongo.ErrNoDocuments
+	}
+	stored := *item
+	stored.ID = id
+	r.items[id] = &stored
+	return nil
+}
+func (r *fakeCatalogItemRepo) Delete(_ context.Context, id primitive.ObjectID) error {
+	if _, ok := r.items[id]; !ok {
+		return mongo.ErrNoDocuments
+	}
+	delete(r.items, id)
+	return nil
+}
 
 // --- Invoice (map-backed so FindByVetID returns real counts) ---
 
