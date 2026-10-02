@@ -30,7 +30,7 @@ func newPetControllerWithFakes() (*PetController, *fakeClientRepo, *fakePetRepo)
 
 func seedClient(t *testing.T, repo *fakeClientRepo, vetID primitive.ObjectID) *models.Client {
 	t.Helper()
-	client := &models.Client{VetID: vetID, FullName: "Owner", CPF: "123", Phone: "456"}
+	client := &models.Client{VetID: vetID, FullName: "Owner", CPF: "529.982.247-25", Phone: "(11) 98765-4321"}
 	if err := repo.Create(context.Background(), client); err != nil {
 		t.Fatalf("seed client: %v", err)
 	}

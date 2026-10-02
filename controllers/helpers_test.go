@@ -166,13 +166,20 @@ func TestValidateClient(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "valid client",
-			client:  models.Client{FullName: "John Doe", CPF: "12345678900", Phone: "5511999999999"},
+			name:    "valid client with cpf and phone",
+			client:  models.Client{FullName: "John Doe", CPF: "529.982.247-25", Phone: "(11) 98765-4321"},
 			wantErr: false,
 		},
-		{name: "missing full name", client: models.Client{CPF: "123", Phone: "456"}, wantErr: true},
-		{name: "missing cpf", client: models.Client{FullName: "John", Phone: "456"}, wantErr: true},
-		{name: "missing phone", client: models.Client{FullName: "John", CPF: "123"}, wantErr: true},
+		{
+			name:    "valid client with optional fields omitted",
+			client:  models.Client{FullName: "John Doe"},
+			wantErr: false,
+		},
+		{name: "missing full name", client: models.Client{CPF: "529.982.247-25", Phone: "(11) 98765-4321"}, wantErr: true},
+		{name: "full name too short", client: models.Client{FullName: "J"}, wantErr: true},
+		{name: "invalid cpf when informed", client: models.Client{FullName: "John", CPF: "123"}, wantErr: true},
+		{name: "invalid phone when informed", client: models.Client{FullName: "John", Phone: "456"}, wantErr: true},
+		{name: "invalid zip code when informed", client: models.Client{FullName: "John", Address: models.Address{ZipCode: "123"}}, wantErr: true},
 	}
 
 	for _, tt := range tests {
@@ -194,13 +201,17 @@ func TestValidatePet(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "valid pet",
-			pet:     models.Pet{Name: "Rex", Species: "dog", OwnerID: ownerID},
+			name:    "valid pet seed style",
+			pet:     models.Pet{Name: "Rex", Species: "Cachorro", AgeUnit: "anos", Sex: "M", Age: 4, Weight: 32.5, OwnerID: ownerID},
 			wantErr: false,
 		},
-		{name: "missing name", pet: models.Pet{Species: "dog", OwnerID: ownerID}, wantErr: true},
+		{name: "missing name", pet: models.Pet{Species: "Cachorro", OwnerID: ownerID}, wantErr: true},
 		{name: "missing species", pet: models.Pet{Name: "Rex", OwnerID: ownerID}, wantErr: true},
-		{name: "missing owner id", pet: models.Pet{Name: "Rex", Species: "dog"}, wantErr: true},
+		{name: "missing owner id", pet: models.Pet{Name: "Rex", Species: "Cachorro"}, wantErr: true},
+		{name: "age too high", pet: models.Pet{Name: "Rex", Species: "Cachorro", Age: 601, OwnerID: ownerID}, wantErr: true},
+		{name: "weight too high", pet: models.Pet{Name: "Rex", Species: "Cachorro", Weight: 201, OwnerID: ownerID}, wantErr: true},
+		{name: "invalid age unit", pet: models.Pet{Name: "Rex", Species: "Cachorro", AgeUnit: "decadas", OwnerID: ownerID}, wantErr: true},
+		{name: "invalid sex", pet: models.Pet{Name: "Rex", Species: "Cachorro", Sex: "X", OwnerID: ownerID}, wantErr: true},
 	}
 
 	for _, tt := range tests {
@@ -216,11 +227,15 @@ func TestValidatePet(t *testing.T) {
 func TestValidateConsultation(t *testing.T) {
 	petID := primitive.NewObjectID()
 
-	if err := validateConsultation(&models.Consultation{PetID: petID}); err != nil {
+	valid := &models.Consultation{PetID: petID, Anamnesis: models.Anamnesis{MainComplaint: "Vômito há dois dias"}}
+	if err := validateConsultation(valid); err != nil {
 		t.Errorf("expected no error for valid consultation, got %v", err)
 	}
 	if err := validateConsultation(&models.Consultation{}); err == nil {
 		t.Error("expected error for consultation without pet_id, got nil")
+	}
+	if err := validateConsultation(&models.Consultation{PetID: petID}); err == nil {
+		t.Error("expected error for consultation without main complaint, got nil")
 	}
 }
 
@@ -239,6 +254,7 @@ func TestValidateVaccine(t *testing.T) {
 		},
 		{name: "missing pet id", vaccine: models.Vaccine{VaccineName: "Rabies"}, wantErr: true},
 		{name: "missing vaccine name", vaccine: models.Vaccine{PetID: petID}, wantErr: true},
+		{name: "vaccine name only spaces", vaccine: models.Vaccine{PetID: petID, VaccineName: "   "}, wantErr: true},
 	}
 
 	for _, tt := range tests {

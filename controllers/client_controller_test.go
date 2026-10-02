@@ -33,7 +33,7 @@ func TestClientCreateSetsVetScope(t *testing.T) {
 	ctrl, repo := newClientControllerWithFakes()
 
 	vetID := primitive.NewObjectID()
-	body := models.Client{FullName: "Jane", CPF: "123", Phone: "456"}
+	body := models.Client{FullName: "Jane", CPF: "529.982.247-25", Phone: "(11) 98765-4321"}
 
 	req := withUserID(httptest.NewRequest(http.MethodPost, "/clients", mustJSON(t, body)), vetID)
 	rec := httptest.NewRecorder()
