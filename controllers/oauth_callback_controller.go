@@ -28,7 +28,7 @@ func NewOAuthCallbackController(userRepo repositories.UserRepository) *OAuthCall
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param body body OAuthCallbackRequest true "OAuth callback request"
+// @Param body body models.SocialLoginRequest true "OAuth callback request (provider + userData)"
 // @Success 200 {object} models.AuthResponse
 // @Failure 400 {object} map[string]string
 // @Router /auth/oauth/callback [post]

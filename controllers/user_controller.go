@@ -398,3 +398,16 @@ type UpdateProfileRequest struct {
 type UpdateProfilePictureRequest struct {
 	ProfilePicture string `json:"profile_picture"`
 }
+
+// ChangePasswordRequest is the request body for changing an existing password.
+// It documents the ChangePassword handler, which decodes the same shape.
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
+// SetPasswordRequest is the request body for setting a first password on a
+// social-login account. It documents the SetPassword handler.
+type SetPasswordRequest struct {
+	Password string `json:"password"`
+}
