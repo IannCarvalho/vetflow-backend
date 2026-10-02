@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -413,16 +414,37 @@ func (c *PetController) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// validatePet validates required fields
+// validatePet validates pet fields. Name, Species and OwnerID are required.
+// Species is intentionally not restricted to a fixed list because the seeds use
+// pt-BR values (Cachorro/Gato/Coelho). Age/Weight have sane bounds and, when
+// informed, AgeUnit and Sex must belong to the accepted sets.
 func validatePet(pet *models.Pet) error {
-	if pet.Name == "" {
-		return errValidation("name is required")
+	if strings.TrimSpace(pet.Name) == "" {
+		return errValidationWithDetails("name", "nome é obrigatório")
 	}
-	if pet.Species == "" {
-		return errValidation("species is required")
+	if strings.TrimSpace(pet.Species) == "" {
+		return errValidationWithDetails("species", "espécie é obrigatória")
 	}
 	if pet.OwnerID.IsZero() {
-		return errValidation("owner_id is required")
+		return errValidationWithDetails("owner_id", "proprietário é obrigatório")
+	}
+	if pet.Age < 0 || pet.Age > 600 {
+		return errValidationWithDetails("age", "idade deve estar entre 0 e 600")
+	}
+	if pet.AgeUnit != "" {
+		switch pet.AgeUnit {
+		case "meses", "anos", "months", "years":
+		default:
+			return errValidationWithDetails("age_unit", "unidade de idade inválida (use meses, anos, months ou years)")
+		}
+	}
+	switch pet.Sex {
+	case "", "M", "F", "male", "female":
+	default:
+		return errValidationWithDetails("sex", "sexo inválido (use M, F, male ou female)")
+	}
+	if pet.Weight < 0 || pet.Weight > 200 {
+		return errValidationWithDetails("weight", "peso deve estar entre 0 e 200")
 	}
 	return nil
 }
