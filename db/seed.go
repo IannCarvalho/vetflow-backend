@@ -117,8 +117,8 @@ func seedTestData(db *mongo.Database, ctx context.Context) error {
 		{"Carlos Oliveira", "168.995.350-09", "(11) 97654-3210", "Avenida Paulista", "1500", "01310-100", vet1.ID},
 		{"Ana Costa", "111.444.777-35", "(11) 96543-2109", "Rua da Paz", "88", "02345-678", vet1.ID},
 		{"Pedro Gomes", "390.533.447-05", "(21) 95432-1098", "Avenida Brasil", "742", "20010-000", vet2.ID},
-		{"Fernanda Lima", "457.845.818-80", "(21) 94321-0987", "Rua do Comércio", "56", "20021-130", vet2.ID},
-		{"Ricardo Souza", "764.831.158-07", "(31) 93210-9876", "Rua dos Ipês", "320", "30140-071", vet2.ID},
+		{"Fernanda Lima", "457.845.818-05", "(21) 94321-0987", "Rua do Comércio", "56", "20021-130", vet2.ID},
+		{"Ricardo Souza", "764.831.158-57", "(31) 93210-9876", "Rua dos Ipês", "320", "30140-071", vet2.ID},
 	}
 	clients := make([]*models.Client, len(clientSpecs))
 	clientObjs := make([]interface{}, len(clientSpecs))
