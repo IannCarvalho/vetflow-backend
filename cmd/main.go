@@ -116,7 +116,16 @@ func main() {
 
 	// Start server
 	addr := ":" + cfg.Port
-	srv := &http.Server{Addr: addr, Handler: router}
+	// Timeouts bound how long the server waits on slow clients, mitigating
+	// slowloris / slow-client attacks that hold connections open indefinitely.
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
