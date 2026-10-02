@@ -2,6 +2,8 @@ package routes
 
 import (
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -17,10 +19,31 @@ import (
 func NewRouter(db *mongo.Database) *chi.Mux {
 	r := chi.NewRouter()
 
+	// Parse the CORS allowlist once. CORS_ALLOWED_ORIGINS is a comma-separated
+	// list of origins; when empty we fall back to "*" (dev behavior unchanged).
+	var allowed []string
+	for _, o := range strings.Split(os.Getenv("CORS_ALLOWED_ORIGINS"), ",") {
+		if o = strings.TrimSpace(o); o != "" {
+			allowed = append(allowed, o)
+		}
+	}
+
 	// CORS Middleware
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
+			if len(allowed) == 0 {
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+			} else {
+				origin := r.Header.Get("Origin")
+				allowOrigin := allowed[0]
+				for _, o := range allowed {
+					if o == origin {
+						allowOrigin = origin
+						break
+					}
+				}
+				w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
+			}
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-ID")
 			w.Header().Set("Access-Control-Max-Age", "3600")
