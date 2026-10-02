@@ -23,6 +23,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/vetflow/veterinary-api/config"
@@ -43,6 +46,10 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, `{"status":"ok","service":"vetflow"}`)
 	})
+
+	// Root context cancelled on SIGINT/SIGTERM so shutdown can propagate.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	// Load configuration
 	log.Println("[MAIN] Starting application...")
@@ -101,15 +108,31 @@ func main() {
 		scheduler := services.NewNotificationScheduler(
 			notificationService, notificationRepo, userRepo, mailer, 24*time.Hour,
 		)
-		scheduler.Start(context.Background())
+		scheduler.Start(ctx)
 	} else {
 		log.Println("[MAIN] Email notifications disabled (EMAIL_NOTIFICATIONS_ENABLED=false)")
 	}
 
 	// Start server
 	addr := ":" + cfg.Port
-	log.Printf("[MAIN] Starting server on %s\n", addr)
-	if err := http.ListenAndServe(addr, router); err != nil {
-		log.Fatalf("[MAIN] FATAL: Server error: %v", err)
+	srv := &http.Server{Addr: addr, Handler: router}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("[MAIN] FATAL: Server error: %v", err)
+		}
+	}()
+	log.Printf("[MAIN] Server listening on %s\n", addr)
+
+	// Block until a shutdown signal cancels the root context.
+	<-ctx.Done()
+	log.Println("[MAIN] Shutdown signal received, shutting down server...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("[MAIN] Server shutdown error: %v\n", err)
+	} else {
+		log.Println("[MAIN] Server shut down gracefully")
 	}
 }
