@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -296,13 +297,13 @@ func (c *VaccineController) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// validateVaccine validates required fields
+// validateVaccine validates required fields: the pet and a non-empty vaccine name.
 func validateVaccine(vaccine *models.Vaccine) error {
 	if vaccine.PetID.IsZero() {
-		return errValidation("pet_id is required")
+		return errValidationWithDetails("pet_id", "pet é obrigatório")
 	}
-	if vaccine.VaccineName == "" {
-		return errValidation("vaccine_name is required")
+	if strings.TrimSpace(vaccine.VaccineName) == "" {
+		return errValidationWithDetails("vaccine_name", "nome da vacina é obrigatório")
 	}
 	return nil
 }

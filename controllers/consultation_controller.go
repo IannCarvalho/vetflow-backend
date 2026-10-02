@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -280,10 +281,14 @@ func (c *ConsultationController) Delete(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// validateConsultation validates required fields
+// validateConsultation validates required fields: the pet and a non-empty main
+// complaint in the anamnesis.
 func validateConsultation(consultation *models.Consultation) error {
 	if consultation.PetID.IsZero() {
-		return errValidation("pet_id is required")
+		return errValidationWithDetails("pet_id", "pet é obrigatório")
+	}
+	if strings.TrimSpace(consultation.Anamnesis.MainComplaint) == "" {
+		return errValidationWithDetails("main_complaint", "queixa principal é obrigatória")
 	}
 	return nil
 }
