@@ -335,32 +335,86 @@ func (r *fakeVaccineRepo) DeleteByPetID(_ context.Context, petID primitive.Objec
 	return nil
 }
 
-// --- Consultation (satisfies the interface; no exercised logic) ---
+// --- Consultation (map-backed so FindByVetID returns real counts) ---
 
-type fakeConsultationRepo struct{}
+type fakeConsultationRepo struct {
+	items map[primitive.ObjectID]*models.Consultation
+}
 
 var _ repositories.ConsultationRepository = (*fakeConsultationRepo)(nil)
 
-func newFakeConsultationRepo() *fakeConsultationRepo { return &fakeConsultationRepo{} }
+func newFakeConsultationRepo() *fakeConsultationRepo {
+	return &fakeConsultationRepo{items: make(map[primitive.ObjectID]*models.Consultation)}
+}
 
-func (r *fakeConsultationRepo) Create(context.Context, *models.Consultation) error { return nil }
-func (r *fakeConsultationRepo) FindByID(context.Context, primitive.ObjectID) (*models.Consultation, error) {
-	return nil, nil
-}
-func (r *fakeConsultationRepo) FindAll(context.Context) ([]*models.Consultation, error) {
-	return nil, nil
-}
-func (r *fakeConsultationRepo) FindByPetID(context.Context, primitive.ObjectID) ([]*models.Consultation, error) {
-	return nil, nil
-}
-func (r *fakeConsultationRepo) FindByVetID(context.Context, primitive.ObjectID) ([]*models.Consultation, error) {
-	return nil, nil
-}
-func (r *fakeConsultationRepo) Update(context.Context, primitive.ObjectID, *models.Consultation) error {
+func (r *fakeConsultationRepo) Create(_ context.Context, consultation *models.Consultation) error {
+	if consultation.ID.IsZero() {
+		consultation.ID = primitive.NewObjectID()
+	}
+	stored := *consultation
+	r.items[consultation.ID] = &stored
 	return nil
 }
-func (r *fakeConsultationRepo) Delete(context.Context, primitive.ObjectID) error      { return nil }
-func (r *fakeConsultationRepo) DeleteByPetID(context.Context, primitive.ObjectID) error { return nil }
+func (r *fakeConsultationRepo) FindByID(_ context.Context, id primitive.ObjectID) (*models.Consultation, error) {
+	consultation, ok := r.items[id]
+	if !ok {
+		return nil, nil
+	}
+	copied := *consultation
+	return &copied, nil
+}
+func (r *fakeConsultationRepo) FindAll(context.Context) ([]*models.Consultation, error) {
+	out := make([]*models.Consultation, 0, len(r.items))
+	for _, c := range r.items {
+		copied := *c
+		out = append(out, &copied)
+	}
+	return out, nil
+}
+func (r *fakeConsultationRepo) FindByPetID(_ context.Context, petID primitive.ObjectID) ([]*models.Consultation, error) {
+	out := make([]*models.Consultation, 0)
+	for _, c := range r.items {
+		if c.PetID == petID {
+			copied := *c
+			out = append(out, &copied)
+		}
+	}
+	return out, nil
+}
+func (r *fakeConsultationRepo) FindByVetID(_ context.Context, vetID primitive.ObjectID) ([]*models.Consultation, error) {
+	out := make([]*models.Consultation, 0)
+	for _, c := range r.items {
+		if c.VetID == vetID {
+			copied := *c
+			out = append(out, &copied)
+		}
+	}
+	return out, nil
+}
+func (r *fakeConsultationRepo) Update(_ context.Context, id primitive.ObjectID, consultation *models.Consultation) error {
+	if _, ok := r.items[id]; !ok {
+		return mongo.ErrNoDocuments
+	}
+	stored := *consultation
+	stored.ID = id
+	r.items[id] = &stored
+	return nil
+}
+func (r *fakeConsultationRepo) Delete(_ context.Context, id primitive.ObjectID) error {
+	if _, ok := r.items[id]; !ok {
+		return mongo.ErrNoDocuments
+	}
+	delete(r.items, id)
+	return nil
+}
+func (r *fakeConsultationRepo) DeleteByPetID(_ context.Context, petID primitive.ObjectID) error {
+	for id, c := range r.items {
+		if c.PetID == petID {
+			delete(r.items, id)
+		}
+	}
+	return nil
+}
 
 // --- Prescription (satisfies the interface; no exercised logic) ---
 
@@ -386,57 +440,169 @@ func (r *fakePrescriptionRepo) Update(context.Context, primitive.ObjectID, *mode
 func (r *fakePrescriptionRepo) Delete(context.Context, primitive.ObjectID) error      { return nil }
 func (r *fakePrescriptionRepo) DeleteByPetID(context.Context, primitive.ObjectID) error { return nil }
 
-// --- Invoice (satisfies the interface; no exercised logic) ---
+// --- Invoice (map-backed so FindByVetID returns real counts) ---
 
-type fakeInvoiceRepo struct{}
+type fakeInvoiceRepo struct {
+	items map[primitive.ObjectID]*models.Invoice
+}
 
 var _ repositories.InvoiceRepository = (*fakeInvoiceRepo)(nil)
 
-func newFakeInvoiceRepo() *fakeInvoiceRepo { return &fakeInvoiceRepo{} }
+func newFakeInvoiceRepo() *fakeInvoiceRepo {
+	return &fakeInvoiceRepo{items: make(map[primitive.ObjectID]*models.Invoice)}
+}
 
-func (r *fakeInvoiceRepo) Create(context.Context, *models.Invoice) error { return nil }
-func (r *fakeInvoiceRepo) FindByID(context.Context, primitive.ObjectID) (*models.Invoice, error) {
-	return nil, nil
-}
-func (r *fakeInvoiceRepo) FindByVetID(context.Context, primitive.ObjectID) ([]*models.Invoice, error) {
-	return nil, nil
-}
-func (r *fakeInvoiceRepo) FindByClientID(context.Context, primitive.ObjectID) ([]*models.Invoice, error) {
-	return nil, nil
-}
-func (r *fakeInvoiceRepo) Update(context.Context, primitive.ObjectID, *models.Invoice) error {
+func (r *fakeInvoiceRepo) Create(_ context.Context, invoice *models.Invoice) error {
+	if invoice.ID.IsZero() {
+		invoice.ID = primitive.NewObjectID()
+	}
+	stored := *invoice
+	r.items[invoice.ID] = &stored
 	return nil
 }
-func (r *fakeInvoiceRepo) Delete(context.Context, primitive.ObjectID) error         { return nil }
-func (r *fakeInvoiceRepo) DeleteByClientID(context.Context, primitive.ObjectID) error { return nil }
+func (r *fakeInvoiceRepo) FindByID(_ context.Context, id primitive.ObjectID) (*models.Invoice, error) {
+	invoice, ok := r.items[id]
+	if !ok {
+		return nil, nil
+	}
+	copied := *invoice
+	return &copied, nil
+}
+func (r *fakeInvoiceRepo) FindByVetID(_ context.Context, vetID primitive.ObjectID) ([]*models.Invoice, error) {
+	out := make([]*models.Invoice, 0)
+	for _, inv := range r.items {
+		if inv.VetID == vetID {
+			copied := *inv
+			out = append(out, &copied)
+		}
+	}
+	return out, nil
+}
+func (r *fakeInvoiceRepo) FindByClientID(_ context.Context, clientID primitive.ObjectID) ([]*models.Invoice, error) {
+	out := make([]*models.Invoice, 0)
+	for _, inv := range r.items {
+		if inv.ClientID == clientID {
+			copied := *inv
+			out = append(out, &copied)
+		}
+	}
+	return out, nil
+}
+func (r *fakeInvoiceRepo) Update(_ context.Context, id primitive.ObjectID, invoice *models.Invoice) error {
+	if _, ok := r.items[id]; !ok {
+		return mongo.ErrNoDocuments
+	}
+	stored := *invoice
+	stored.ID = id
+	r.items[id] = &stored
+	return nil
+}
+func (r *fakeInvoiceRepo) Delete(_ context.Context, id primitive.ObjectID) error {
+	if _, ok := r.items[id]; !ok {
+		return mongo.ErrNoDocuments
+	}
+	delete(r.items, id)
+	return nil
+}
+func (r *fakeInvoiceRepo) DeleteByClientID(_ context.Context, clientID primitive.ObjectID) error {
+	for id, inv := range r.items {
+		if inv.ClientID == clientID {
+			delete(r.items, id)
+		}
+	}
+	return nil
+}
 
-// --- Appointment (satisfies the interface; no exercised logic) ---
+// --- Appointment (map-backed so FindByVetID returns real counts) ---
 
-type fakeAppointmentRepo struct{}
+type fakeAppointmentRepo struct {
+	items map[primitive.ObjectID]*models.Appointment
+}
 
 var _ repositories.AppointmentRepository = (*fakeAppointmentRepo)(nil)
 
-func newFakeAppointmentRepo() *fakeAppointmentRepo { return &fakeAppointmentRepo{} }
+func newFakeAppointmentRepo() *fakeAppointmentRepo {
+	return &fakeAppointmentRepo{items: make(map[primitive.ObjectID]*models.Appointment)}
+}
 
-func (r *fakeAppointmentRepo) Create(context.Context, *models.Appointment) error { return nil }
-func (r *fakeAppointmentRepo) FindByID(context.Context, primitive.ObjectID) (*models.Appointment, error) {
-	return nil, nil
-}
-func (r *fakeAppointmentRepo) FindByVetID(context.Context, primitive.ObjectID) ([]*models.Appointment, error) {
-	return nil, nil
-}
-func (r *fakeAppointmentRepo) FindByVetIDInRange(context.Context, primitive.ObjectID, time.Time, time.Time) ([]*models.Appointment, error) {
-	return nil, nil
-}
-func (r *fakeAppointmentRepo) FindByPetID(context.Context, primitive.ObjectID) ([]*models.Appointment, error) {
-	return nil, nil
-}
-func (r *fakeAppointmentRepo) Update(context.Context, primitive.ObjectID, *models.Appointment) error {
+func (r *fakeAppointmentRepo) Create(_ context.Context, appointment *models.Appointment) error {
+	if appointment.ID.IsZero() {
+		appointment.ID = primitive.NewObjectID()
+	}
+	stored := *appointment
+	r.items[appointment.ID] = &stored
 	return nil
 }
-func (r *fakeAppointmentRepo) Delete(context.Context, primitive.ObjectID) error        { return nil }
-func (r *fakeAppointmentRepo) DeleteByPetID(context.Context, primitive.ObjectID) error   { return nil }
-func (r *fakeAppointmentRepo) DeleteByClientID(context.Context, primitive.ObjectID) error { return nil }
+func (r *fakeAppointmentRepo) FindByID(_ context.Context, id primitive.ObjectID) (*models.Appointment, error) {
+	appointment, ok := r.items[id]
+	if !ok {
+		return nil, nil
+	}
+	copied := *appointment
+	return &copied, nil
+}
+func (r *fakeAppointmentRepo) FindByVetID(_ context.Context, vetID primitive.ObjectID) ([]*models.Appointment, error) {
+	out := make([]*models.Appointment, 0)
+	for _, a := range r.items {
+		if a.VetID == vetID {
+			copied := *a
+			out = append(out, &copied)
+		}
+	}
+	return out, nil
+}
+func (r *fakeAppointmentRepo) FindByVetIDInRange(_ context.Context, vetID primitive.ObjectID, start, end time.Time) ([]*models.Appointment, error) {
+	out := make([]*models.Appointment, 0)
+	for _, a := range r.items {
+		if a.VetID == vetID && !a.StartTime.Before(start) && !a.StartTime.After(end) {
+			copied := *a
+			out = append(out, &copied)
+		}
+	}
+	return out, nil
+}
+func (r *fakeAppointmentRepo) FindByPetID(_ context.Context, petID primitive.ObjectID) ([]*models.Appointment, error) {
+	out := make([]*models.Appointment, 0)
+	for _, a := range r.items {
+		if a.PetID == petID {
+			copied := *a
+			out = append(out, &copied)
+		}
+	}
+	return out, nil
+}
+func (r *fakeAppointmentRepo) Update(_ context.Context, id primitive.ObjectID, appointment *models.Appointment) error {
+	if _, ok := r.items[id]; !ok {
+		return mongo.ErrNoDocuments
+	}
+	stored := *appointment
+	stored.ID = id
+	r.items[id] = &stored
+	return nil
+}
+func (r *fakeAppointmentRepo) Delete(_ context.Context, id primitive.ObjectID) error {
+	if _, ok := r.items[id]; !ok {
+		return mongo.ErrNoDocuments
+	}
+	delete(r.items, id)
+	return nil
+}
+func (r *fakeAppointmentRepo) DeleteByPetID(_ context.Context, petID primitive.ObjectID) error {
+	for id, a := range r.items {
+		if a.PetID == petID {
+			delete(r.items, id)
+		}
+	}
+	return nil
+}
+func (r *fakeAppointmentRepo) DeleteByClientID(_ context.Context, clientID primitive.ObjectID) error {
+	for id, a := range r.items {
+		if a.ClientID == clientID {
+			delete(r.items, id)
+		}
+	}
+	return nil
+}
 
 // --- Attachment (satisfies the interface; no exercised logic) ---
 

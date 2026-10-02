@@ -95,6 +95,7 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 	invoiceController := controllers.NewInvoiceController(invoiceRepo)
 	appointmentController := controllers.NewAppointmentController(appointmentRepo)
 	attachmentController := controllers.NewAttachmentController(attachmentRepo, petRepo, clientRepo)
+	dashboardController := controllers.NewDashboardController(clientRepo, petRepo, consultationRepo, vaccineRepo, invoiceRepo, appointmentRepo)
 
 	// Health check (readiness): pings MongoDB with a short timeout so the
 	// endpoint reflects real DB availability. Unauthenticated by design.
@@ -238,6 +239,12 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 		r.Get("/{id}/content", attachmentController.GetContent)
 		r.Put("/{id}", attachmentController.Update)
 		r.Delete("/{id}", attachmentController.Delete)
+	})
+
+	// Dashboard routes (protected and scoped to the authenticated vet)
+	r.Route("/dashboard", func(r chi.Router) {
+		r.Use(AuthMiddleware)
+		r.Get("/stats", dashboardController.Stats)
 	})
 
 	// Notification routes (protected)
