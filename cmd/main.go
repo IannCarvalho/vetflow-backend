@@ -81,6 +81,14 @@ func main() {
 	}
 	log.Println("[MAIN] Database seed completed")
 
+	// Ensure non-unique indexes for vet-scoped and lookup queries. Index
+	// creation must never block boot, so failures are only logged.
+	idxCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := db.CreateIndexes(idxCtx, database); err != nil {
+		log.Printf("[MAIN] WARNING: index creation issue: %v", err)
+	}
+
 	// Create router
 	log.Println("[MAIN] Creating router...")
 	router := routes.NewRouter(database)

@@ -1,0 +1,22 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Create non-unique MongoDB indexes at startup for the vet-scoped and lookup fields, in a new idempotent db.CreateIndexes called from main.go after seeding. Index field names were verified against models/ BSON tags. NOTE: the requested pets.vet_id index is intentionally SKIPPED because the Pet model has no vet_id field (pets are scoped via owner_id -> client's vet_id); pets.owner_id is created instead. Independent of other features; depends on nothing but touches cmd/main.go (coordinate ordering if run alongside FEAT-002, which also edits main.go).",
+  "status": "completed",
+  "steps": [
+    "Create db/indexes.go: package db; func CreateIndexes(ctx context.Context, db *mongo.Database) error. For each collection create non-unique index model(s) via db.Collection(name).Indexes().CreateMany(ctx, []mongo.IndexModel{...}) with Keys bson.D{{Key: field, Value: 1}} and NO Unique option. Collections/fields (confirmed BSON names): clients -> vet_id; pets -> owner_id (NOT vet_id: field does not exist on Pet); consultations -> vet_id, pet_id; vaccines -> vet_id, pet_id; prescriptions -> vet_id, pet_id; catalog_items -> vet_id; invoices -> vet_id, client_id; appointments -> vet_id, start_time; attachments -> pet_id; notifications -> vet_id. Return the first error encountered (or aggregate/log per collection) but the caller will only warn.",
+    "In cmd/main.go, after `db.SeedDatabase(database)` (and its logging), add a timeout context (e.g. context.WithTimeout(context.Background(), 30*time.Second), defer cancel) and call `if err := db.CreateIndexes(idxCtx, database); err != nil { log.Printf(\"[MAIN] WARNING: index creation issue: %v\", err) }`. Boot must NOT fail on index error.",
+    "Reuse existing imports in db/indexes.go: context, go.mongodb.org/mongo-driver/bson, go.mongodb.org/mongo-driver/mongo, go.mongodb.org/mongo-driver/mongo/options (options only if you set any; CreateMany needs none for plain non-unique indexes)."
+  ],
+  "acceptance_criteria": [
+    "db/indexes.go defines CreateIndexes creating non-unique indexes for exactly: clients.vet_id, pets.owner_id, consultations.vet_id, consultations.pet_id, vaccines.vet_id, vaccines.pet_id, prescriptions.vet_id, prescriptions.pet_id, catalog_items.vet_id, invoices.vet_id, invoices.client_id, appointments.vet_id, appointments.start_time, attachments.pet_id, notifications.vet_id.",
+    "No index is created on a non-existent field (pets.vet_id is excluded by design).",
+    "cmd/main.go calls db.CreateIndexes after SeedDatabase and only logs a warning on error.",
+    "The Docker gate command passes: go build ./... && go vet ./... && go test ./..."
+  ],
+  "verification": [
+    "docker run --rm -v \"${PWD}:/app\" -w /app golang:1.22-bullseye sh -c \"go build ./... && go vet ./... && go test ./...\" — all pass."
+  ],
+  "blocked_reason": null,
+  "findings": "Created db/indexes.go with idempotent CreateIndexes(ctx, db) that builds plain ascending non-unique single-field indexes via Indexes().CreateMany for exactly: clients.vet_id, pets.owner_id, consultations.vet_id/pet_id, vaccines.vet_id/pet_id, prescriptions.vet_id/pet_id, catalog_items.vet_id, invoices.vet_id/client_id, appointments.vet_id/start_time, attachments.pet_id, notifications.vet_id. pets.vet_id intentionally excluded (Pet model has no vet_id; verified BSON tags in models/). Returns the first per-collection error wrapped with the collection name. Wired into cmd/main.go after SeedDatabase using a 30s timeout context; failures are warn-only (log.Printf '[MAIN] WARNING: index creation issue') and never block boot. context and time imports already present in main.go. Docker gate passed: go build ./... && go vet ./... && go test ./... — all ok."
+}
