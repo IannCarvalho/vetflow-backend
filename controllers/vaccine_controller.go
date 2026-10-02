@@ -138,6 +138,12 @@ func (c *VaccineController) GetAll(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /vaccines/{id} [get]
 func (c *VaccineController) GetByID(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
 	id := chi.URLParam(r, "id")
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -153,6 +159,11 @@ func (c *VaccineController) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	if vaccine == nil {
 		writeErrorWithDetails(w, http.StatusNotFound, "Vacina não encontrada", "Nenhuma vacina com este ID existe no banco de dados", "VACCINE_NOT_FOUND")
+		return
+	}
+
+	if err := validateResourceOwnership(vaccine.VetID, userID); err != nil {
+		writeErrorWithDetails(w, http.StatusForbidden, "Acesso negado", err.Error(), "ACCESS_DENIED")
 		return
 	}
 
@@ -184,6 +195,22 @@ func (c *VaccineController) Update(w http.ResponseWriter, r *http.Request) {
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de vacina inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+		return
+	}
+
+	existing, err := c.repo.FindByID(r.Context(), objectID)
+	if err != nil {
+		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar vacina", err.Error(), "DB_QUERY_ERROR")
+		return
+	}
+
+	if existing == nil {
+		writeErrorWithDetails(w, http.StatusNotFound, "Vacina não encontrada", "Nenhuma vacina com este ID existe no banco de dados", "VACCINE_NOT_FOUND")
+		return
+	}
+
+	if err := validateResourceOwnership(existing.VetID, userID); err != nil {
+		writeErrorWithDetails(w, http.StatusForbidden, "Acesso negado", err.Error(), "ACCESS_DENIED")
 		return
 	}
 
@@ -228,10 +255,32 @@ func (c *VaccineController) Update(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /vaccines/{id} [delete]
 func (c *VaccineController) Delete(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
 	id := chi.URLParam(r, "id")
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de vacina inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+		return
+	}
+
+	existing, err := c.repo.FindByID(r.Context(), objectID)
+	if err != nil {
+		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar vacina", err.Error(), "DB_QUERY_ERROR")
+		return
+	}
+
+	if existing == nil {
+		writeErrorWithDetails(w, http.StatusNotFound, "Vacina não encontrada", "Nenhuma vacina com este ID existe no banco de dados", "VACCINE_NOT_FOUND")
+		return
+	}
+
+	if err := validateResourceOwnership(existing.VetID, userID); err != nil {
+		writeErrorWithDetails(w, http.StatusForbidden, "Acesso negado", err.Error(), "ACCESS_DENIED")
 		return
 	}
 
