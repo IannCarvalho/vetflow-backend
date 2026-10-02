@@ -90,7 +90,8 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 	socialAuthController := controllers.NewSocialAuthController(userRepo)
 	oauthCallbackController := controllers.NewOAuthCallbackController(userRepo)
 	notificationController := controllers.NewNotificationController(notificationService)
-	prescriptionController := controllers.NewPrescriptionController(prescriptionRepo)
+	prescriptionController := controllers.NewPrescriptionController(prescriptionRepo).
+		WithPrintContext(petRepo, clientRepo, userRepo)
 	catalogController := controllers.NewCatalogItemController(catalogRepo)
 	invoiceController := controllers.NewInvoiceController(invoiceRepo)
 	appointmentController := controllers.NewAppointmentController(appointmentRepo)
@@ -197,6 +198,7 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 		r.Get("/", prescriptionController.GetAll)
 		r.Post("/", prescriptionController.Create)
 		r.Get("/{id}", prescriptionController.GetByID)
+		r.Get("/{id}/print", prescriptionController.Print)
 		r.Put("/{id}", prescriptionController.Update)
 		r.Delete("/{id}", prescriptionController.Delete)
 	})

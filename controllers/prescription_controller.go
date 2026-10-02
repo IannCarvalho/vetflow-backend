@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,6 +16,12 @@ import (
 
 type PrescriptionController struct {
 	repo repositories.PrescriptionRepository
+	// The following repositories are only used to resolve the human-readable
+	// header of a printable prescription (pet -> tutor -> vet). They are
+	// optional: when nil, Print still renders the document with placeholders.
+	petRepo    repositories.PetRepository
+	clientRepo repositories.ClientRepository
+	userRepo   repositories.UserRepository
 }
 
 // NewPrescriptionController creates a new prescription controller with dependency injection
@@ -22,6 +29,22 @@ func NewPrescriptionController(repo repositories.PrescriptionRepository) *Prescr
 	return &PrescriptionController{
 		repo: repo,
 	}
+}
+
+// WithPrintContext injects the repositories needed to resolve the printable
+// prescription header (pet, tutor and veterinarian). It returns the same
+// controller for fluent configuration and keeps the base constructor's
+// signature stable for the many tests that build a controller with just the
+// prescription repository.
+func (c *PrescriptionController) WithPrintContext(
+	petRepo repositories.PetRepository,
+	clientRepo repositories.ClientRepository,
+	userRepo repositories.UserRepository,
+) *PrescriptionController {
+	c.petRepo = petRepo
+	c.clientRepo = clientRepo
+	c.userRepo = userRepo
+	return c
 }
 
 // Create godoc
@@ -158,6 +181,98 @@ func (c *PrescriptionController) GetByID(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(prescription)
+}
+
+// Print godoc
+// @Summary Render a printable prescription
+// @Description Returns the prescription (receituário) as a print-ready HTML document with the pet, tutor and veterinarian header resolved. Pass ?format=json to receive the aggregated payload instead of HTML. Must belong to the authenticated vet.
+// @Tags Prescriptions
+// @Accept json
+// @Produce html
+// @Produce json
+// @Param id path string true "Prescription ID"
+// @Param format query string false "Response format: html (default) or json"
+// @Success 200 {object} PrintablePrescription
+// @Failure 400 {object} map[string]string "Invalid ID"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Prescription not found"
+// @Failure 500 {object} map[string]string "Server error"
+// @Router /prescriptions/{id}/print [get]
+func (c *PrescriptionController) Print(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	objectID, err := parsePrescriptionIDParam(r, "id")
+	if err != nil {
+		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de receituário inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+		return
+	}
+
+	prescription, err := c.repo.FindByID(r.Context(), objectID)
+	if err != nil {
+		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar receituário", err.Error(), "DB_QUERY_ERROR")
+		return
+	}
+	if prescription == nil {
+		writeErrorWithDetails(w, http.StatusNotFound, "Receituário não encontrado", "Nenhum receituário com este ID existe no banco de dados", "PRESCRIPTION_NOT_FOUND")
+		return
+	}
+	if err := validateResourceOwnership(prescription.VetID, userID); err != nil {
+		writeError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
+	doc := c.buildPrintable(r.Context(), prescription)
+
+	// ?format=json returns the aggregated payload so the frontend can render its
+	// own layout; the default is a self-contained, print-ready HTML document.
+	if r.URL.Query().Get("format") == "json" {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(doc)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := renderPrescriptionHTML(w, doc); err != nil {
+		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao renderizar receituário", err.Error(), "RENDER_ERROR")
+		return
+	}
+}
+
+// buildPrintable resolves the pet, tutor and veterinarian so the printable
+// document carries human-readable names rather than raw ObjectIDs. Lookups are
+// best-effort: when a repository is unavailable or a record is missing, the
+// corresponding fields are simply left blank.
+func (c *PrescriptionController) buildPrintable(ctx context.Context, p *models.Prescription) *PrintablePrescription {
+	doc := &PrintablePrescription{Prescription: p}
+
+	var ownerID primitive.ObjectID
+	if c.petRepo != nil && !p.PetID.IsZero() {
+		if pet, err := c.petRepo.FindByID(ctx, p.PetID); err == nil && pet != nil {
+			doc.PetName = pet.Name
+			doc.PetSpecies = pet.Species
+			doc.PetBreed = pet.Breed
+			ownerID = pet.OwnerID
+		}
+	}
+
+	if c.clientRepo != nil && !ownerID.IsZero() {
+		if client, err := c.clientRepo.FindByID(ctx, ownerID); err == nil && client != nil {
+			doc.OwnerName = client.FullName
+		}
+	}
+
+	if c.userRepo != nil && !p.VetID.IsZero() {
+		if vet, err := c.userRepo.FindByObjectID(ctx, p.VetID); err == nil && vet != nil {
+			doc.VetName = vet.Name
+		}
+	}
+
+	return doc
 }
 
 // Update godoc
