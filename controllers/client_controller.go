@@ -3,9 +3,11 @@ package controllers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/vetflow/veterinary-api/helpers"
 	"github.com/vetflow/veterinary-api/models"
 	"github.com/vetflow/veterinary-api/repositories"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -342,16 +344,21 @@ func (c *ClientController) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// validateClient validates required fields
+// validateClient validates client fields. FullName is required (at least two
+// characters after trimming); CPF, Phone and Address.ZipCode are optional, but
+// when informed they must be well-formed Brazilian values.
 func validateClient(client *models.Client) error {
-	if client.FullName == "" {
-		return errValidation("full_name is required")
+	if len(strings.TrimSpace(client.FullName)) < 2 {
+		return errValidationWithDetails("full_name", "nome completo é obrigatório e deve ter ao menos 2 caracteres")
 	}
-	if client.CPF == "" {
-		return errValidation("cpf is required")
+	if client.CPF != "" && !helpers.IsValidCPF(client.CPF) {
+		return errValidationWithDetails("cpf", "CPF inválido")
 	}
-	if client.Phone == "" {
-		return errValidation("phone is required")
+	if client.Phone != "" && !helpers.IsValidBRPhone(client.Phone) {
+		return errValidationWithDetails("phone", "telefone inválido (use DDD + número, 10 ou 11 dígitos)")
+	}
+	if client.Address.ZipCode != "" && !helpers.IsValidCEP(client.Address.ZipCode) {
+		return errValidationWithDetails("zip_code", "CEP inválido (deve conter 8 dígitos)")
 	}
 	return nil
 }
