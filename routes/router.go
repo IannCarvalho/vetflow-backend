@@ -3,6 +3,7 @@ package routes
 import (
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -100,10 +101,20 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
+	// Rate limiter for the credential endpoints. AUTH_RATE_LIMIT_PER_MIN sets the
+	// per-IP limit (default 10; <=0 disables limiting).
+	authRateLimit := 10
+	if v, err := strconv.Atoi(os.Getenv("AUTH_RATE_LIMIT_PER_MIN")); err == nil {
+		authRateLimit = v
+	}
+	authLimiter := NewRateLimiter(authRateLimit)
+
 	// Auth routes
 	r.Route("/auth", func(r chi.Router) {
-		r.Post("/register", authController.Register)
-		r.Post("/login", authController.Login)
+		// Rate-limit only the credential endpoints to blunt brute-force; the
+		// social/oauth/verify routes are left untouched.
+		r.With(authLimiter).Post("/register", authController.Register)
+		r.With(authLimiter).Post("/login", authController.Login)
 		r.Post("/social-login", socialAuthController.SocialLogin)
 		r.Post("/oauth/callback", oauthCallbackController.OAuthCallback)
 		r.Get("/verify/{token}", authController.Verify)
