@@ -35,6 +35,12 @@ func NewVaccineController(repo repositories.VaccineRepository) *VaccineControlle
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /vaccines [post]
 func (c *VaccineController) Create(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
 	var vaccine models.Vaccine
 	if err := json.NewDecoder(r.Body).Decode(&vaccine); err != nil {
 		writeErrorWithDetails(w, http.StatusBadRequest, "Falha ao decodificar corpo da requisição", err.Error(), "INVALID_JSON")
@@ -46,6 +52,9 @@ func (c *VaccineController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Scope the vaccine to the authenticated vet so listing by vet and the
+	// notification sweep can find it (and clients can't spoof another vet).
+	vaccine.VetID = userID
 	vaccine.CreatedAt = time.Now()
 
 	if err := c.repo.Create(r.Context(), &vaccine); err != nil {
@@ -165,6 +174,12 @@ func (c *VaccineController) GetByID(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /vaccines/{id} [put]
 func (c *VaccineController) Update(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
 	id := chi.URLParam(r, "id")
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -184,6 +199,8 @@ func (c *VaccineController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	vaccine.ID = objectID
+	// Preserve vet ownership so an update never blanks or reassigns vet_id.
+	vaccine.VetID = userID
 
 	if err := c.repo.Update(r.Context(), objectID, &vaccine); err != nil {
 		if err == mongo.ErrNoDocuments {
