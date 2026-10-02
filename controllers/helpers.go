@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/vetflow/veterinary-api/internal/ctxkeys"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -42,7 +43,7 @@ func errValidationWithDetails(field, reason string) error {
 
 // getUserIDFromContext extracts and validates user ID from request context
 func getUserIDFromContext(ctx context.Context) (primitive.ObjectID, error) {
-	userIDStr := ctx.Value("userID")
+	userIDStr := ctx.Value(ctxkeys.UserID)
 	if userIDStr == nil {
 		return primitive.ObjectID{}, errors.New("usuário não autenticado")
 	}

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/vetflow/veterinary-api/internal/ctxkeys"
 	"github.com/vetflow/veterinary-api/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -120,7 +121,7 @@ func TestGetUserIDFromContext(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			if tt.setKey {
-				ctx = context.WithValue(ctx, "userID", tt.ctxValue)
+				ctx = context.WithValue(ctx, ctxkeys.UserID, tt.ctxValue)
 			}
 
 			id, err := getUserIDFromContext(ctx)

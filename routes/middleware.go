@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/vetflow/veterinary-api/helpers"
+	"github.com/vetflow/veterinary-api/internal/ctxkeys"
 )
 
 // AuthMiddleware validates the JWT from the Authorization header and injects the
@@ -34,7 +35,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		// Add user ID to request context.
 		// Key must match the one read by getUserIDFromContext in controllers/helpers.go.
-		ctx := context.WithValue(r.Context(), "userID", claims.UserID) //nolint:staticcheck // string key matches existing reader
+		ctx := context.WithValue(r.Context(), ctxkeys.UserID, claims.UserID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
