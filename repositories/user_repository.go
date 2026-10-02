@@ -12,6 +12,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// ErrEmailAlreadyRegistered is returned by UserRepository.Create when a user
+// with the same email already exists. It is a package-level sentinel so callers
+// can match it with errors.Is.
+var ErrEmailAlreadyRegistered = errors.New("email already registered")
+
 // UserRepository defines the interface for user data access
 type UserRepository interface {
 	Create(ctx context.Context, user *models.User) error
@@ -37,7 +42,7 @@ func (r *UserRepositoryImpl) Create(ctx context.Context, user *models.User) erro
 	// Check if email already exists
 	existingUser, err := r.FindByEmail(ctx, user.Email)
 	if err == nil && existingUser != nil {
-		return errors.New("email already registered")
+		return ErrEmailAlreadyRegistered
 	}
 
 	user.ID = primitive.NewObjectID()
@@ -47,7 +52,7 @@ func (r *UserRepositoryImpl) Create(ctx context.Context, user *models.User) erro
 	result, err := r.collection.InsertOne(ctx, user)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
-			return errors.New("email already registered")
+			return ErrEmailAlreadyRegistered
 		}
 		return err
 	}

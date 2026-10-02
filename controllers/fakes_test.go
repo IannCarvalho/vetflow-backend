@@ -18,6 +18,72 @@ import (
 // the controller tests carry real logic; the rest exist to satisfy the
 // interfaces and return zero values.
 
+// --- User ---
+
+type fakeUserRepo struct {
+	byEmail map[string]*models.User
+}
+
+var _ repositories.UserRepository = (*fakeUserRepo)(nil)
+
+func newFakeUserRepo() *fakeUserRepo {
+	return &fakeUserRepo{byEmail: make(map[string]*models.User)}
+}
+
+func (r *fakeUserRepo) Create(_ context.Context, user *models.User) error {
+	if _, ok := r.byEmail[user.Email]; ok {
+		return repositories.ErrEmailAlreadyRegistered
+	}
+	if user.ID.IsZero() {
+		user.ID = primitive.NewObjectID()
+	}
+	stored := *user
+	r.byEmail[user.Email] = &stored
+	return nil
+}
+
+func (r *fakeUserRepo) FindByEmail(_ context.Context, email string) (*models.User, error) {
+	user, ok := r.byEmail[email]
+	if !ok {
+		return nil, nil
+	}
+	copied := *user
+	return &copied, nil
+}
+
+func (r *fakeUserRepo) FindByID(_ context.Context, id string) (*models.User, error) {
+	for _, u := range r.byEmail {
+		if u.ID.Hex() == id {
+			copied := *u
+			return &copied, nil
+		}
+	}
+	return nil, nil
+}
+
+func (r *fakeUserRepo) FindByObjectID(_ context.Context, id primitive.ObjectID) (*models.User, error) {
+	for _, u := range r.byEmail {
+		if u.ID == id {
+			copied := *u
+			return &copied, nil
+		}
+	}
+	return nil, nil
+}
+
+func (r *fakeUserRepo) FindAll(_ context.Context) ([]*models.User, error) {
+	out := make([]*models.User, 0, len(r.byEmail))
+	for _, u := range r.byEmail {
+		copied := *u
+		out = append(out, &copied)
+	}
+	return out, nil
+}
+
+func (r *fakeUserRepo) UpdateUser(_ context.Context, _ primitive.ObjectID, _ map[string]interface{}) (*models.User, error) {
+	return nil, nil
+}
+
 // --- Client ---
 
 type fakeClientRepo struct {

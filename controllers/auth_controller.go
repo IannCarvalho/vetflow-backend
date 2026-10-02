@@ -57,7 +57,7 @@ func (c *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 	// Save to database
 	ctx := r.Context()
 	if err := c.userRepo.Create(ctx, user); err != nil {
-		if errors.Is(err, errors.New("email already registered")) {
+		if errors.Is(err, repositories.ErrEmailAlreadyRegistered) {
 			writeError(w, http.StatusConflict, "Email already registered")
 			return
 		}
