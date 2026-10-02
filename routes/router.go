@@ -1,10 +1,12 @@
 package routes
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -94,9 +96,17 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 	appointmentController := controllers.NewAppointmentController(appointmentRepo)
 	attachmentController := controllers.NewAttachmentController(attachmentRepo, petRepo, clientRepo)
 
-	// Health check
+	// Health check (readiness): pings MongoDB with a short timeout so the
+	// endpoint reflects real DB availability. Unauthenticated by design.
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		if err := db.Client().Ping(ctx, nil); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte(`{"status":"degraded","db":"down"}`))
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
 	})
