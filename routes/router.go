@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"github.com/vetflow/veterinary-api/controllers"
 	_ "github.com/vetflow/veterinary-api/docs"
@@ -31,34 +32,16 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 		}
 	}
 
-	// CORS Middleware
-	r.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if len(allowed) == 0 {
-				w.Header().Set("Access-Control-Allow-Origin", "*")
-			} else {
-				origin := r.Header.Get("Origin")
-				allowOrigin := allowed[0]
-				for _, o := range allowed {
-					if o == origin {
-						allowOrigin = origin
-						break
-					}
-				}
-				w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
-			}
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-ID")
-			w.Header().Set("Access-Control-Max-Age", "3600")
-
-			if r.Method == http.MethodOptions {
-				w.WriteHeader(http.StatusOK)
-				return
-			}
-
-			next.ServeHTTP(w, r)
-		})
-	})
+	// CORS Middleware. An empty allowlist leaves AllowedOrigins empty, which
+	// go-chi/cors treats as match-all ("*") — the unchanged dev default. When
+	// the allowlist is populated, only those exact origins are echoed back and
+	// non-matching origins are denied (no fall-through to the first entry).
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins: allowed,
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Content-Type", "Authorization", "X-User-ID"},
+		MaxAge:         3600,
+	}))
 
 	// Middleware
 	r.Use(middleware.Logger)
