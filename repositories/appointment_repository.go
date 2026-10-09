@@ -50,7 +50,7 @@ func (r *mongoAppointmentRepository) FindByVetID(ctx context.Context, vetID prim
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var appointments []*models.Appointment
 	if err = cursor.All(ctx, &appointments); err != nil {
@@ -73,13 +73,25 @@ func (r *mongoAppointmentRepository) FindByVetIDInRange(ctx context.Context, vet
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var appointments []*models.Appointment
 	if err = cursor.All(ctx, &appointments); err != nil {
 		return nil, err
 	}
 	return appointments, nil
+}
+
+// CountByVetIDInRange counts appointments for a vet whose start time falls in the
+// half-open window [start, end) ($gte start, $lt end), without loading them.
+func (r *mongoAppointmentRepository) CountByVetIDInRange(ctx context.Context, vetID primitive.ObjectID, start, end time.Time) (int64, error) {
+	return r.collection.CountDocuments(ctx, bson.M{
+		"vet_id": vetID,
+		"start_time": bson.M{
+			"$gte": start,
+			"$lt":  end,
+		},
+	})
 }
 
 // FindByPetID retrieves all appointments for a given pet, sorted by start time
@@ -89,7 +101,7 @@ func (r *mongoAppointmentRepository) FindByPetID(ctx context.Context, petID prim
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var appointments []*models.Appointment
 	if err = cursor.All(ctx, &appointments); err != nil {

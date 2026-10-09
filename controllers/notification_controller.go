@@ -37,7 +37,7 @@ func (c *NotificationController) Generate(w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"message":"Notifications generated"}`))
+	_, _ = w.Write([]byte(`{"message":"Notifications generated"}`))
 }
 
 func (c *NotificationController) GetAll(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +60,7 @@ func (c *NotificationController) GetAll(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(notifications)
+	_ = json.NewEncoder(w).Encode(notifications)
 }
 
 func (c *NotificationController) MarkAsRead(w http.ResponseWriter, r *http.Request) {
@@ -86,7 +86,7 @@ func (c *NotificationController) MarkAsRead(w http.ResponseWriter, r *http.Reque
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"message":"Notification marked as read"}`))
+	_, _ = w.Write([]byte(`{"message":"Notification marked as read"}`))
 }
 
 func (c *NotificationController) Dismiss(w http.ResponseWriter, r *http.Request) {
@@ -112,5 +112,5 @@ func (c *NotificationController) Dismiss(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"message":"Notification dismissed"}`))
+	_, _ = w.Write([]byte(`{"message":"Notification dismissed"}`))
 }

@@ -64,7 +64,7 @@ func DownloadImageAsBase64(imageURL string) (string, error) {
 		log.Printf("Error downloading image from host %s: %v", host, err)
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check status code
 	if resp.StatusCode != http.StatusOK {

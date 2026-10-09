@@ -89,11 +89,11 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 		defer cancel()
 		if err := db.Client().Ping(ctx, nil); err != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte(`{"status":"degraded","db":"down"}`))
+			_, _ = w.Write([]byte(`{"status":"degraded","db":"down"}`))
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok"}`))
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
 
 	// Rate limiter for the credential endpoints. AUTH_RATE_LIMIT_PER_MIN sets the

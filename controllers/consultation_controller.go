@@ -65,7 +65,7 @@ func (c *ConsultationController) Create(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(consultation)
+	_ = json.NewEncoder(w).Encode(consultation)
 }
 
 // GetAll godoc
@@ -107,7 +107,7 @@ func (c *ConsultationController) GetAll(w http.ResponseWriter, r *http.Request) 
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(consultations)
+		_ = json.NewEncoder(w).Encode(consultations)
 		return
 	}
 
@@ -123,7 +123,7 @@ func (c *ConsultationController) GetAll(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(consultations)
+	_ = json.NewEncoder(w).Encode(consultations)
 }
 
 // GetByID godoc
@@ -173,7 +173,7 @@ func (c *ConsultationController) GetByID(w http.ResponseWriter, r *http.Request)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(consultation)
+	_ = json.NewEncoder(w).Encode(consultation)
 }
 
 // PrescriptionDraft godoc
@@ -224,7 +224,7 @@ func (c *ConsultationController) PrescriptionDraft(w http.ResponseWriter, r *htt
 	draft := buildPrescriptionDraft(consultation)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(draft)
+	_ = json.NewEncoder(w).Encode(draft)
 }
 
 // buildPrescriptionDraft assembles an unsaved prescription seeded from a
@@ -324,7 +324,7 @@ func (c *ConsultationController) Update(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(consultation)
+	_ = json.NewEncoder(w).Encode(consultation)
 }
 
 // Delete godoc

@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/vetflow/veterinary-api/models"
 	"go.mongodb.org/mongo-driver/bson"
@@ -47,7 +48,7 @@ func (r *mongoVaccineRepository) FindAll(ctx context.Context) ([]*models.Vaccine
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var vaccines []*models.Vaccine
 	err = cursor.All(ctx, &vaccines)
@@ -63,7 +64,7 @@ func (r *mongoVaccineRepository) FindByPetID(ctx context.Context, petID primitiv
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var vaccines []*models.Vaccine
 	err = cursor.All(ctx, &vaccines)
@@ -79,7 +80,7 @@ func (r *mongoVaccineRepository) FindByVetID(ctx context.Context, vetID primitiv
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var vaccines []*models.Vaccine
 	if err = cursor.All(ctx, &vaccines); err != nil {
@@ -87,6 +88,21 @@ func (r *mongoVaccineRepository) FindByVetID(ctx context.Context, vetID primitiv
 	}
 
 	return vaccines, nil
+}
+
+// CountByVetIDNextDoseInRange counts vaccines for a vet whose next dose date falls
+// in the window [start, end]. Unlike the consultation/appointment ranges (which
+// are half-open [start, end) via $lt to match FindByVetIDInRange), the vaccine
+// window is INCLUSIVE on both ends ($gte start, $lte end). This preserves the
+// original dashboard semantics (!Before(now) && !After(windowEnd)) byte-for-byte.
+func (r *mongoVaccineRepository) CountByVetIDNextDoseInRange(ctx context.Context, vetID primitive.ObjectID, start, end time.Time) (int64, error) {
+	return r.collection.CountDocuments(ctx, bson.M{
+		"vet_id": vetID,
+		"next_dose_date": bson.M{
+			"$gte": start,
+			"$lte": end,
+		},
+	})
 }
 
 // Update updates an existing vaccine

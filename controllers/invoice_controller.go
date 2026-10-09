@@ -71,7 +71,7 @@ func (c *InvoiceController) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(invoice)
+	_ = json.NewEncoder(w).Encode(invoice)
 }
 
 // GetAll godoc
@@ -159,7 +159,7 @@ func (c *InvoiceController) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(invoice)
+	_ = json.NewEncoder(w).Encode(invoice)
 }
 
 // Update godoc
@@ -237,7 +237,7 @@ func (c *InvoiceController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(invoice)
+	_ = json.NewEncoder(w).Encode(invoice)
 }
 
 // Delete godoc
@@ -302,7 +302,7 @@ func writeInvoices(w http.ResponseWriter, invoices []*models.Invoice) {
 		invoices = make([]*models.Invoice, 0)
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(invoices)
+	_ = json.NewEncoder(w).Encode(invoices)
 }
 
 func filterOwnedInvoices(invoices []*models.Invoice, vetID primitive.ObjectID) []*models.Invoice {

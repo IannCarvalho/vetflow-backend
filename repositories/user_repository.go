@@ -98,7 +98,7 @@ func (r *UserRepositoryImpl) FindAll(ctx context.Context) ([]*models.User, error
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var users []*models.User
 	if err = cursor.All(ctx, &users); err != nil {

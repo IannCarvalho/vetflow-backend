@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/vetflow/veterinary-api/models"
 	"go.mongodb.org/mongo-driver/bson"
@@ -47,7 +48,7 @@ func (r *mongoConsultationRepository) FindAll(ctx context.Context) ([]*models.Co
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var consultations []*models.Consultation
 	err = cursor.All(ctx, &consultations)
@@ -63,7 +64,7 @@ func (r *mongoConsultationRepository) FindByPetID(ctx context.Context, petID pri
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var consultations []*models.Consultation
 	err = cursor.All(ctx, &consultations)
@@ -79,7 +80,7 @@ func (r *mongoConsultationRepository) FindByVetID(ctx context.Context, vetID pri
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var consultations []*models.Consultation
 	if err = cursor.All(ctx, &consultations); err != nil {
@@ -87,6 +88,18 @@ func (r *mongoConsultationRepository) FindByVetID(ctx context.Context, vetID pri
 	}
 
 	return consultations, nil
+}
+
+// CountByVetIDInRange counts consultations for a vet whose date falls in the
+// half-open window [start, end) ($gte start, $lt end), without loading them.
+func (r *mongoConsultationRepository) CountByVetIDInRange(ctx context.Context, vetID primitive.ObjectID, start, end time.Time) (int64, error) {
+	return r.collection.CountDocuments(ctx, bson.M{
+		"vet_id": vetID,
+		"date": bson.M{
+			"$gte": start,
+			"$lt":  end,
+		},
+	})
 }
 
 // Update updates an existing consultation
