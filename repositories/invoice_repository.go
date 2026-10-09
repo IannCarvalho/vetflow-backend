@@ -74,6 +74,12 @@ func (r *mongoInvoiceRepository) FindByClientID(ctx context.Context, clientID pr
 	return invoices, nil
 }
 
+// CountByVetIDAndStatus counts invoices for a vet with the given payment status,
+// without loading them.
+func (r *mongoInvoiceRepository) CountByVetIDAndStatus(ctx context.Context, vetID primitive.ObjectID, status models.PaymentStatus) (int64, error) {
+	return r.collection.CountDocuments(ctx, bson.M{"vet_id": vetID, "status": status})
+}
+
 // Update updates an existing invoice
 func (r *mongoInvoiceRepository) Update(ctx context.Context, id primitive.ObjectID, invoice *models.Invoice) error {
 	update := bson.M{

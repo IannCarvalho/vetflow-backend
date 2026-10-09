@@ -10,8 +10,9 @@ import (
 )
 
 // DashboardController aggregates read-only stats scoped to the authenticated vet.
-// It reuses the existing per-resource FindByVetID methods and computes the
-// counts in memory, so it does not require any new repository interface methods.
+// It pushes each count down into MongoDB (CountDocuments / aggregation $count)
+// instead of loading whole collections into memory, computing only the time
+// bounds in Go.
 type DashboardController struct {
 	clientRepo       repositories.ClientRepository
 	petRepo          repositories.PetRepository
@@ -69,80 +70,64 @@ func (c *DashboardController) Stats(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	clients, err := c.clientRepo.FindByVetID(ctx, userID)
+	// Compute the time bounds the counts need. The consultation window is the
+	// whole current calendar month and the appointment window is the current
+	// calendar day; both are half-open [start, end) to match the
+	// FindByVetIDInRange convention. The vaccine window is [now, now+30d]
+	// INCLUSIVE on both ends, preserving the original !Before(now) &&
+	// !After(windowEnd) semantics (the vaccine repo uses $lte for this reason).
+	now := time.Now()
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	monthEnd := monthStart.AddDate(0, 1, 0)
+	dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	dayEnd := dayStart.AddDate(0, 0, 1)
+	vaccineWindowEnd := now.Add(30 * 24 * time.Hour)
+
+	totalClients, err := c.clientRepo.CountByVetID(ctx, userID)
 	if err != nil {
 		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar clientes", err.Error(), "DB_QUERY_ERROR")
 		return
 	}
 
-	pets, err := c.petRepo.FindByVetID(ctx, userID)
+	totalPets, err := c.petRepo.CountByVetID(ctx, userID)
 	if err != nil {
 		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar pets", err.Error(), "DB_QUERY_ERROR")
 		return
 	}
 
-	consultations, err := c.consultationRepo.FindByVetID(ctx, userID)
+	consultationsThisMonth, err := c.consultationRepo.CountByVetIDInRange(ctx, userID, monthStart, monthEnd)
 	if err != nil {
 		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar consultas", err.Error(), "DB_QUERY_ERROR")
 		return
 	}
 
-	vaccines, err := c.vaccineRepo.FindByVetID(ctx, userID)
+	upcomingVaccinations, err := c.vaccineRepo.CountByVetIDNextDoseInRange(ctx, userID, now, vaccineWindowEnd)
 	if err != nil {
 		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar vacinas", err.Error(), "DB_QUERY_ERROR")
 		return
 	}
 
-	invoices, err := c.invoiceRepo.FindByVetID(ctx, userID)
+	pendingInvoices, err := c.invoiceRepo.CountByVetIDAndStatus(ctx, userID, models.PaymentPending)
 	if err != nil {
 		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar faturas", err.Error(), "DB_QUERY_ERROR")
 		return
 	}
 
-	appointments, err := c.appointmentRepo.FindByVetID(ctx, userID)
+	appointmentsToday, err := c.appointmentRepo.CountByVetIDInRange(ctx, userID, dayStart, dayEnd)
 	if err != nil {
 		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar agendamentos", err.Error(), "DB_QUERY_ERROR")
 		return
 	}
 
-	now := time.Now()
-	windowEnd := now.Add(30 * 24 * time.Hour)
-
 	stats := dashboardStats{
-		TotalClients: len(clients),
-		TotalPets:    len(pets),
-	}
-
-	for _, consultation := range consultations {
-		if consultation.Date.Year() == now.Year() && consultation.Date.Month() == now.Month() {
-			stats.ConsultationsThisMonth++
-		}
-	}
-
-	for _, vaccine := range vaccines {
-		next := vaccine.NextDoseDate
-		if !next.Before(now) && !next.After(windowEnd) {
-			stats.UpcomingVaccinations++
-		}
-	}
-
-	for _, invoice := range invoices {
-		if invoice.Status == models.PaymentPending {
-			stats.PendingInvoices++
-		}
-	}
-
-	for _, appointment := range appointments {
-		if sameDay(appointment.StartTime, now) {
-			stats.AppointmentsToday++
-		}
+		TotalClients:           int(totalClients),
+		TotalPets:              int(totalPets),
+		ConsultationsThisMonth: int(consultationsThisMonth),
+		UpcomingVaccinations:   int(upcomingVaccinations),
+		PendingInvoices:        int(pendingInvoices),
+		AppointmentsToday:      int(appointmentsToday),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(stats)
-}
-
-// sameDay reports whether a and b fall on the same calendar day.
-func sameDay(a, b time.Time) bool {
-	return a.Year() == b.Year() && a.Month() == b.Month() && a.Day() == b.Day()
 }

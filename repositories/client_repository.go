@@ -73,6 +73,11 @@ func (r *mongoClientRepository) FindByVetID(ctx context.Context, vetID primitive
 	return clients, nil
 }
 
+// CountByVetID counts all clients for a given veterinarian without loading them.
+func (r *mongoClientRepository) CountByVetID(ctx context.Context, vetID primitive.ObjectID) (int64, error) {
+	return r.collection.CountDocuments(ctx, bson.M{"vet_id": vetID})
+}
+
 // Update updates an existing client
 func (r *mongoClientRepository) Update(ctx context.Context, id primitive.ObjectID, client *models.Client) error {
 	update := bson.M{

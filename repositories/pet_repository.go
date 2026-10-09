@@ -145,6 +145,51 @@ func (r *mongoPetRepository) FindByVetID(ctx context.Context, vetID primitive.Ob
 	return pets, nil
 }
 
+// CountByVetID counts all pets whose owning client belongs to the given vet,
+// without loading them. Pets have no vet_id, so this reuses the FindByVetID
+// $lookup/$unwind/$match aggregation and appends a $count stage.
+func (r *mongoPetRepository) CountByVetID(ctx context.Context, vetID primitive.ObjectID) (int64, error) {
+	pipeline := mongo.Pipeline{
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "clients"},
+				{Key: "localField", Value: "owner_id"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "client"},
+			}},
+		},
+		bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$client"},
+				{Key: "preserveNullAndEmptyArrays", Value: false},
+			}},
+		},
+		bson.D{
+			{Key: "$match", Value: bson.M{"client.vet_id": vetID}},
+		},
+		bson.D{
+			{Key: "$count", Value: "count"},
+		},
+	}
+
+	cursor, err := r.collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = cursor.Close(ctx) }()
+
+	var results []struct {
+		Count int64 `bson:"count"`
+	}
+	if err = cursor.All(ctx, &results); err != nil {
+		return 0, err
+	}
+	if len(results) == 0 {
+		return 0, nil
+	}
+	return results[0].Count, nil
+}
+
 // Update updates an existing pet
 func (r *mongoPetRepository) Update(ctx context.Context, id primitive.ObjectID, pet *models.Pet) error {
 	update := bson.M{
