@@ -30,6 +30,29 @@ func (r *notificationRepository) Create(ctx context.Context, notification *model
 	return err
 }
 
+// ExistsPending reports whether a pending notification already exists for the
+// same vet/resource/type/target date. The target date is matched against the
+// whole UTC day so a sweep running at a different time of day still matches.
+func (r *notificationRepository) ExistsPending(ctx context.Context, vetID primitive.ObjectID, resourceID string, nType models.NotificationType, targetDate time.Time) (bool, error) {
+	t := targetDate.UTC()
+	dayStart := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+	dayEnd := dayStart.AddDate(0, 0, 1)
+
+	filter := bson.M{
+		"vet_id":      vetID,
+		"resource_id": resourceID,
+		"type":        nType,
+		"status":      models.NotificationStatusPending,
+		"target_date": bson.M{"$gte": dayStart, "$lt": dayEnd},
+	}
+
+	count, err := r.collection.CountDocuments(ctx, filter, options.Count().SetLimit(1))
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func (r *notificationRepository) GetByVetID(ctx context.Context, vetID primitive.ObjectID) ([]models.Notification, error) {
 	filter := bson.M{"vet_id": vetID}
 	opts := options.Find().SetSort(bson.M{"target_date": 1})

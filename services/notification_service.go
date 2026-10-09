@@ -42,17 +42,35 @@ func NewNotificationService(
 func (s *notificationService) GenerateNotifications(ctx context.Context, vetID primitive.ObjectID) error {
 	now := time.Now()
 
+	// Collect the reminders that are actually due, so we only touch the pets
+	// those reminders reference instead of one FindByID per record (N+1).
+	type reminder struct {
+		petID      primitive.ObjectID
+		resourceID string
+		nType      models.NotificationType
+		targetDate time.Time
+	}
+
+	var reminders []reminder
+	petIDSet := make(map[primitive.ObjectID]struct{})
+
+	addReminder := func(petID primitive.ObjectID, resourceID string, nType models.NotificationType, targetDate time.Time) {
+		if _, ok := daysUntilIfDue(targetDate, now); !ok {
+			return
+		}
+		reminders = append(reminders, reminder{petID, resourceID, nType, targetDate})
+		petIDSet[petID] = struct{}{}
+	}
+
 	// Get consultations by vet
 	consultations, err := s.consultationRepo.FindByVetID(ctx, vetID)
 	if err != nil {
 		return err
 	}
-
-	// Process consultations with return dates
 	for _, consultation := range consultations {
 		if consultation.ReturnDate != nil {
-			s.checkAndCreateNotification(ctx, vetID, consultation.PetID, consultation.ID.Hex(),
-				models.NotificationConsultation, *consultation.ReturnDate, now)
+			addReminder(consultation.PetID, consultation.ID.Hex(),
+				models.NotificationConsultation, *consultation.ReturnDate)
 		}
 	}
 
@@ -61,75 +79,86 @@ func (s *notificationService) GenerateNotifications(ctx context.Context, vetID p
 	if err != nil {
 		return err
 	}
-
-	// Process vaccines with next dose dates
 	for _, vaccine := range vaccines {
 		if !vaccine.NextDoseDate.IsZero() {
-			s.checkAndCreateNotification(ctx, vetID, vaccine.PetID, vaccine.ID.Hex(),
-				models.NotificationVaccine, vaccine.NextDoseDate, now)
+			addReminder(vaccine.PetID, vaccine.ID.Hex(),
+				models.NotificationVaccine, vaccine.NextDoseDate)
+		}
+	}
+
+	if len(reminders) == 0 {
+		return nil
+	}
+
+	// Batch-load every referenced pet in a single query and index by id.
+	petIDs := make([]primitive.ObjectID, 0, len(petIDSet))
+	for id := range petIDSet {
+		petIDs = append(petIDs, id)
+	}
+	pets, err := s.petRepo.FindByIDs(ctx, petIDs)
+	if err != nil {
+		return err
+	}
+	petByID := make(map[primitive.ObjectID]*models.Pet, len(pets))
+	for _, pet := range pets {
+		petByID[pet.ID] = pet
+	}
+
+	for _, r := range reminders {
+		pet, ok := petByID[r.petID]
+		if !ok || pet == nil {
+			// Pet was deleted after the consultation/vaccine was recorded; skip.
+			continue
+		}
+		if err := s.createNotification(ctx, vetID, pet, r.resourceID, r.nType, r.targetDate, now); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func (s *notificationService) checkAndCreateNotification(ctx context.Context, vetID primitive.ObjectID,
-	petID primitive.ObjectID, resourceID string, notificationType models.NotificationType,
-	targetDate time.Time, now time.Time) error {
-
-	// Normalize both times to UTC for consistent date comparison
+// daysUntilIfDue returns the number of whole days (UTC, midnight-truncated)
+// between now and targetDate, and whether a reminder is due on that offset
+// (7 days before, 1 day before, or the day itself).
+func daysUntilIfDue(targetDate, now time.Time) (int, bool) {
 	targetDateUTC := targetDate.UTC()
 	nowUTC := now.UTC()
 
-	// Truncate to midnight for date comparison
-	targetDateMidnight := time.Date(targetDateUTC.Year(), targetDateUTC.Month(), targetDateUTC.Day(), 0, 0, 0, 0, time.UTC)
+	targetMidnight := time.Date(targetDateUTC.Year(), targetDateUTC.Month(), targetDateUTC.Day(), 0, 0, 0, 0, time.UTC)
 	nowMidnight := time.Date(nowUTC.Year(), nowUTC.Month(), nowUTC.Day(), 0, 0, 0, 0, time.UTC)
 
-	// Calculate days until target date (using midnight times)
-	daysUntil := int(targetDateMidnight.Sub(nowMidnight).Hours() / 24)
+	daysUntil := int(targetMidnight.Sub(nowMidnight).Hours() / 24)
+	due := daysUntil == 7 || daysUntil == 1 || daysUntil == 0
+	return daysUntil, due
+}
 
-	// Check if notification should be created (7 days before, 1 day before, or on the day)
-	shouldNotify := daysUntil == 7 || daysUntil == 1 || daysUntil == 0
+// createNotification builds and persists a single reminder, skipping it when a
+// pending notification for the same vet/resource/type/target date already
+// exists (idempotent across repeated sweeps).
+func (s *notificationService) createNotification(ctx context.Context, vetID primitive.ObjectID,
+	pet *models.Pet, resourceID string, notificationType models.NotificationType,
+	targetDate time.Time, now time.Time) error {
 
-	if !shouldNotify || daysUntil < 0 {
+	daysUntil, due := daysUntilIfDue(targetDate, now)
+	if !due {
 		return nil
 	}
 
-	// Get pet name for notification
-	pet, err := s.petRepo.FindByID(ctx, petID)
+	exists, err := s.notificationRepo.ExistsPending(ctx, vetID, resourceID, notificationType, targetDate)
 	if err != nil {
 		return err
 	}
-
-	// Create notification
-	title := ""
-	message := ""
-
-	if notificationType == models.NotificationConsultation {
-		title = fmt.Sprintf("Retorno de %s", pet.Name)
-		switch daysUntil {
-		case 7:
-			message = fmt.Sprintf("Consulta de retorno de %s está agendada para daqui a 7 dias", pet.Name)
-		case 1:
-			message = fmt.Sprintf("Consulta de retorno de %s está agendada para amanhã", pet.Name)
-		case 0:
-			message = fmt.Sprintf("Hoje é o dia da consulta de retorno de %s", pet.Name)
-		}
-	} else if notificationType == models.NotificationVaccine {
-		title = fmt.Sprintf("Vacina de %s", pet.Name)
-		switch daysUntil {
-		case 7:
-			message = fmt.Sprintf("Próxima dose de vacina de %s está agendada para daqui a 7 dias", pet.Name)
-		case 1:
-			message = fmt.Sprintf("Próxima dose de vacina de %s está agendada para amanhã", pet.Name)
-		case 0:
-			message = fmt.Sprintf("Hoje é o dia da próxima dose de vacina de %s", pet.Name)
-		}
+	if exists {
+		return nil
 	}
+
+	title, message := notificationContent(notificationType, pet.Name, daysUntil)
 
 	notification := &models.Notification{
 		VetID:      vetID,
-		PetID:      petID,
+		PetID:      pet.ID,
+		ResourceID: resourceID,
 		Type:       notificationType,
 		Title:      title,
 		Message:    message,
@@ -138,11 +167,35 @@ func (s *notificationService) checkAndCreateNotification(ctx context.Context, ve
 		Status:     models.NotificationStatusPending,
 	}
 
-	err = s.notificationRepo.Create(ctx, notification)
-	if err != nil {
-		return err
+	return s.notificationRepo.Create(ctx, notification)
+}
+
+// notificationContent returns the title and message for a reminder, keyed by
+// type and how many days remain.
+func notificationContent(nType models.NotificationType, petName string, daysUntil int) (title, message string) {
+	switch nType {
+	case models.NotificationConsultation:
+		title = fmt.Sprintf("Retorno de %s", petName)
+		switch daysUntil {
+		case 7:
+			message = fmt.Sprintf("Consulta de retorno de %s está agendada para daqui a 7 dias", petName)
+		case 1:
+			message = fmt.Sprintf("Consulta de retorno de %s está agendada para amanhã", petName)
+		case 0:
+			message = fmt.Sprintf("Hoje é o dia da consulta de retorno de %s", petName)
+		}
+	case models.NotificationVaccine:
+		title = fmt.Sprintf("Vacina de %s", petName)
+		switch daysUntil {
+		case 7:
+			message = fmt.Sprintf("Próxima dose de vacina de %s está agendada para daqui a 7 dias", petName)
+		case 1:
+			message = fmt.Sprintf("Próxima dose de vacina de %s está agendada para amanhã", petName)
+		case 0:
+			message = fmt.Sprintf("Hoje é o dia da próxima dose de vacina de %s", petName)
+		}
 	}
-	return nil
+	return title, message
 }
 
 func (s *notificationService) GetNotifications(ctx context.Context, vetID primitive.ObjectID) ([]models.Notification, error) {
