@@ -22,9 +22,13 @@ const (
 )
 
 type Notification struct {
-	ID         primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	VetID      primitive.ObjectID `bson:"vet_id" json:"vet_id"`
-	PetID      primitive.ObjectID `bson:"pet_id" json:"pet_id"`
+	ID    primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	VetID primitive.ObjectID `bson:"vet_id" json:"vet_id"`
+	PetID primitive.ObjectID `bson:"pet_id" json:"pet_id"`
+	// ResourceID is the hex id of the consultation/vaccine that originated this
+	// notification. Persisted so a sweep can detect an existing notification for
+	// the same resource/type/target date and avoid creating duplicates.
+	ResourceID string             `bson:"resource_id,omitempty" json:"resource_id,omitempty"`
 	Type       NotificationType   `bson:"type" json:"type"`
 	Title      string             `bson:"title" json:"title"`
 	Message    string             `bson:"message" json:"message"`

@@ -22,6 +22,7 @@ type ClientRepository interface {
 type PetRepository interface {
 	Create(ctx context.Context, pet *models.Pet) error
 	FindByID(ctx context.Context, id primitive.ObjectID) (*models.Pet, error)
+	FindByIDs(ctx context.Context, ids []primitive.ObjectID) ([]*models.Pet, error)
 	FindAll(ctx context.Context) ([]*models.Pet, error)
 	FindByOwnerID(ctx context.Context, ownerID primitive.ObjectID) ([]*models.Pet, error)
 	FindByVetID(ctx context.Context, vetID primitive.ObjectID) ([]*models.Pet, error)
@@ -113,6 +114,10 @@ type AppointmentRepository interface {
 // NotificationRepository defines operations for notification data
 type NotificationRepository interface {
 	Create(ctx context.Context, notification *models.Notification) error
+	// ExistsPending reports whether a pending notification already exists for the
+	// given vet/resource/type/target date, used to avoid creating duplicates on
+	// repeated sweeps.
+	ExistsPending(ctx context.Context, vetID primitive.ObjectID, resourceID string, nType models.NotificationType, targetDate time.Time) (bool, error)
 	GetByVetID(ctx context.Context, vetID primitive.ObjectID) ([]models.Notification, error)
 	GetPending(ctx context.Context, vetID primitive.ObjectID) ([]models.Notification, error)
 	UpdateStatus(ctx context.Context, id primitive.ObjectID, status models.NotificationStatus) error

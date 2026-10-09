@@ -185,6 +185,17 @@ func (r *fakePetRepo) FindByID(_ context.Context, id primitive.ObjectID) (*model
 	return &copied, nil
 }
 
+func (r *fakePetRepo) FindByIDs(_ context.Context, ids []primitive.ObjectID) ([]*models.Pet, error) {
+	out := make([]*models.Pet, 0, len(ids))
+	for _, id := range ids {
+		if p, ok := r.items[id]; ok {
+			copied := *p
+			out = append(out, &copied)
+		}
+	}
+	return out, nil
+}
+
 func (r *fakePetRepo) FindAll(_ context.Context) ([]*models.Pet, error) {
 	out := make([]*models.Pet, 0, len(r.items))
 	for _, p := range r.items {
