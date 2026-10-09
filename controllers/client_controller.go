@@ -88,7 +88,7 @@ func (c *ClientController) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(client)
+	_ = json.NewEncoder(w).Encode(client)
 }
 
 // GetByID godoc
@@ -134,7 +134,7 @@ func (c *ClientController) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(client)
+	_ = json.NewEncoder(w).Encode(client)
 }
 
 // GetAll godoc
@@ -164,7 +164,7 @@ func (c *ClientController) GetAll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(clients)
+	_ = json.NewEncoder(w).Encode(clients)
 }
 
 // Update godoc
@@ -236,7 +236,7 @@ func (c *ClientController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(client)
+	_ = json.NewEncoder(w).Encode(client)
 }
 
 // Delete godoc

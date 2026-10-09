@@ -49,7 +49,7 @@ func (r *mongoInvoiceRepository) FindByVetID(ctx context.Context, vetID primitiv
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var invoices []*models.Invoice
 	if err = cursor.All(ctx, &invoices); err != nil {
@@ -65,7 +65,7 @@ func (r *mongoInvoiceRepository) FindByClientID(ctx context.Context, clientID pr
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var invoices []*models.Invoice
 	if err = cursor.All(ctx, &invoices); err != nil {

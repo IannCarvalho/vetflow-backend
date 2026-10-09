@@ -47,7 +47,7 @@ func (r *mongoVaccineRepository) FindAll(ctx context.Context) ([]*models.Vaccine
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var vaccines []*models.Vaccine
 	err = cursor.All(ctx, &vaccines)
@@ -63,7 +63,7 @@ func (r *mongoVaccineRepository) FindByPetID(ctx context.Context, petID primitiv
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var vaccines []*models.Vaccine
 	err = cursor.All(ctx, &vaccines)
@@ -79,7 +79,7 @@ func (r *mongoVaccineRepository) FindByVetID(ctx context.Context, vetID primitiv
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var vaccines []*models.Vaccine
 	if err = cursor.All(ctx, &vaccines); err != nil {

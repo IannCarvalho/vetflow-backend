@@ -47,7 +47,7 @@ func (r *mongoConsultationRepository) FindAll(ctx context.Context) ([]*models.Co
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var consultations []*models.Consultation
 	err = cursor.All(ctx, &consultations)
@@ -63,7 +63,7 @@ func (r *mongoConsultationRepository) FindByPetID(ctx context.Context, petID pri
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var consultations []*models.Consultation
 	err = cursor.All(ctx, &consultations)
@@ -79,7 +79,7 @@ func (r *mongoConsultationRepository) FindByVetID(ctx context.Context, vetID pri
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var consultations []*models.Consultation
 	if err = cursor.All(ctx, &consultations); err != nil {

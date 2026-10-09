@@ -52,7 +52,7 @@ func (r *mongoPetRepository) FindByIDs(ctx context.Context, ids []primitive.Obje
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var pets []*models.Pet
 	if err = cursor.All(ctx, &pets); err != nil {
@@ -67,7 +67,7 @@ func (r *mongoPetRepository) FindAll(ctx context.Context) ([]*models.Pet, error)
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var pets []*models.Pet
 	err = cursor.All(ctx, &pets)
@@ -83,7 +83,7 @@ func (r *mongoPetRepository) FindByOwnerID(ctx context.Context, ownerID primitiv
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var pets []*models.Pet
 	err = cursor.All(ctx, &pets)
@@ -135,7 +135,7 @@ func (r *mongoPetRepository) FindByVetID(ctx context.Context, vetID primitive.Ob
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var pets []*models.Pet
 	err = cursor.All(ctx, &pets)

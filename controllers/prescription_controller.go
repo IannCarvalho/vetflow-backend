@@ -92,7 +92,7 @@ func (c *PrescriptionController) Create(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(prescription)
+	_ = json.NewEncoder(w).Encode(prescription)
 }
 
 // GetAll godoc
@@ -180,7 +180,7 @@ func (c *PrescriptionController) GetByID(w http.ResponseWriter, r *http.Request)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(prescription)
+	_ = json.NewEncoder(w).Encode(prescription)
 }
 
 // Print godoc
@@ -232,7 +232,7 @@ func (c *PrescriptionController) Print(w http.ResponseWriter, r *http.Request) {
 	// own layout; the default is a self-contained, print-ready HTML document.
 	if r.URL.Query().Get("format") == "json" {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(doc)
+		_ = json.NewEncoder(w).Encode(doc)
 		return
 	}
 
@@ -344,7 +344,7 @@ func (c *PrescriptionController) Update(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(prescription)
+	_ = json.NewEncoder(w).Encode(prescription)
 }
 
 // Delete godoc
@@ -409,7 +409,7 @@ func writePrescriptions(w http.ResponseWriter, prescriptions []*models.Prescript
 		prescriptions = make([]*models.Prescription, 0)
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(prescriptions)
+	_ = json.NewEncoder(w).Encode(prescriptions)
 }
 
 func filterOwnedPrescriptions(prescriptions []*models.Prescription, vetID primitive.ObjectID) []*models.Prescription {

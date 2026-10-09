@@ -66,7 +66,7 @@ func (c *AppointmentController) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(appointment)
+	_ = json.NewEncoder(w).Encode(appointment)
 }
 
 // GetAll godoc
@@ -183,7 +183,7 @@ func (c *AppointmentController) GetByID(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(appointment)
+	_ = json.NewEncoder(w).Encode(appointment)
 }
 
 // Update godoc
@@ -254,7 +254,7 @@ func (c *AppointmentController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(appointment)
+	_ = json.NewEncoder(w).Encode(appointment)
 }
 
 // Delete godoc
@@ -319,7 +319,7 @@ func writeAppointments(w http.ResponseWriter, appointments []*models.Appointment
 		appointments = make([]*models.Appointment, 0)
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(appointments)
+	_ = json.NewEncoder(w).Encode(appointments)
 }
 
 func filterOwnedAppointments(appointments []*models.Appointment, vetID primitive.ObjectID) []*models.Appointment {

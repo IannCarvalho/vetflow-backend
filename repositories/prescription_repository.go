@@ -49,7 +49,7 @@ func (r *mongoPrescriptionRepository) FindByVetID(ctx context.Context, vetID pri
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var prescriptions []*models.Prescription
 	if err = cursor.All(ctx, &prescriptions); err != nil {
@@ -65,7 +65,7 @@ func (r *mongoPrescriptionRepository) FindByPetID(ctx context.Context, petID pri
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var prescriptions []*models.Prescription
 	if err = cursor.All(ctx, &prescriptions); err != nil {

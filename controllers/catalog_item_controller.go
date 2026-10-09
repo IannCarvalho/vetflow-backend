@@ -66,7 +66,7 @@ func (c *CatalogItemController) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(item)
+	_ = json.NewEncoder(w).Encode(item)
 }
 
 // GetAll godoc
@@ -109,7 +109,7 @@ func (c *CatalogItemController) GetAll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(items)
+	_ = json.NewEncoder(w).Encode(items)
 }
 
 // GetByID godoc
@@ -152,7 +152,7 @@ func (c *CatalogItemController) GetByID(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(item)
+	_ = json.NewEncoder(w).Encode(item)
 }
 
 // Update godoc
@@ -222,7 +222,7 @@ func (c *CatalogItemController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(item)
+	_ = json.NewEncoder(w).Encode(item)
 }
 
 // Delete godoc

@@ -42,12 +42,12 @@ func NewDashboardController(
 
 // dashboardStats is the aggregated response payload for GET /dashboard/stats.
 type dashboardStats struct {
-	TotalClients            int `json:"total_clients"`
-	TotalPets               int `json:"total_pets"`
-	ConsultationsThisMonth  int `json:"consultations_this_month"`
-	UpcomingVaccinations    int `json:"upcoming_vaccinations"`
-	PendingInvoices         int `json:"pending_invoices"`
-	AppointmentsToday       int `json:"appointments_today"`
+	TotalClients           int `json:"total_clients"`
+	TotalPets              int `json:"total_pets"`
+	ConsultationsThisMonth int `json:"consultations_this_month"`
+	UpcomingVaccinations   int `json:"upcoming_vaccinations"`
+	PendingInvoices        int `json:"pending_invoices"`
+	AppointmentsToday      int `json:"appointments_today"`
 }
 
 // Stats godoc
@@ -139,7 +139,7 @@ func (c *DashboardController) Stats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stats)
+	_ = json.NewEncoder(w).Encode(stats)
 }
 
 // sameDay reports whether a and b fall on the same calendar day.

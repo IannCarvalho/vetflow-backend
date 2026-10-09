@@ -47,7 +47,7 @@ func (r *mongoClientRepository) FindAll(ctx context.Context) ([]*models.Client, 
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var clients []*models.Client
 	err = cursor.All(ctx, &clients)
@@ -63,7 +63,7 @@ func (r *mongoClientRepository) FindByVetID(ctx context.Context, vetID primitive
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var clients []*models.Client
 	err = cursor.All(ctx, &clients)

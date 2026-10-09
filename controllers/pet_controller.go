@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -75,19 +76,15 @@ func (c *PetController) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify that the client (owner) belongs to this veterinarian
-	client, err := c.clientRepo.FindByID(r.Context(), pet.OwnerID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "Failed to verify client ownership")
-		return
-	}
-
-	if client == nil {
-		writeError(w, http.StatusBadRequest, "Client not found")
-		return
-	}
-
-	if err := validateResourceOwnership(client.VetID, userID); err != nil {
-		writeError(w, http.StatusForbidden, "You do not have permission to add pets to this client")
+	if _, err := verifyClientOwnership(r.Context(), c.clientRepo, pet.OwnerID, userID); err != nil {
+		switch {
+		case errors.Is(err, errClientNotFound):
+			writeError(w, http.StatusBadRequest, "Client not found")
+		case errors.Is(err, errClientAccessDenied):
+			writeError(w, http.StatusForbidden, "You do not have permission to add pets to this client")
+		default:
+			writeError(w, http.StatusInternalServerError, "Failed to verify client ownership")
+		}
 		return
 	}
 
@@ -101,7 +98,7 @@ func (c *PetController) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(pet)
+	_ = json.NewEncoder(w).Encode(pet)
 }
 
 // GetByID godoc
@@ -143,24 +140,13 @@ func (c *PetController) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify the client owner belongs to this veterinarian
-	client, err := c.clientRepo.FindByID(r.Context(), pet.OwnerID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "Failed to verify client ownership")
-		return
-	}
-
-	if client == nil {
-		writeError(w, http.StatusNotFound, "Client not found")
-		return
-	}
-
-	if err := validateResourceOwnership(client.VetID, userID); err != nil {
-		writeError(w, http.StatusForbidden, "Access denied")
+	if _, err := verifyClientOwnership(r.Context(), c.clientRepo, pet.OwnerID, userID); err != nil {
+		writeClientOwnershipError(w, err)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(pet)
+	_ = json.NewEncoder(w).Encode(pet)
 }
 
 // GetAll godoc
@@ -188,17 +174,8 @@ func (c *PetController) GetAll(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		client, err := c.clientRepo.FindByID(r.Context(), objectID)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "Failed to verify client ownership")
-			return
-		}
-		if client == nil {
-			writeError(w, http.StatusNotFound, "Client not found")
-			return
-		}
-		if err := validateResourceOwnership(client.VetID, userID); err != nil {
-			writeError(w, http.StatusForbidden, "Access denied")
+		if _, err := verifyClientOwnership(r.Context(), c.clientRepo, objectID, userID); err != nil {
+			writeClientOwnershipError(w, err)
 			return
 		}
 
@@ -212,7 +189,7 @@ func (c *PetController) GetAll(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(pets)
+		_ = json.NewEncoder(w).Encode(pets)
 		return
 	}
 
@@ -227,7 +204,7 @@ func (c *PetController) GetAll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(pets)
+	_ = json.NewEncoder(w).Encode(pets)
 }
 
 // Update godoc
@@ -270,19 +247,8 @@ func (c *PetController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify the client owner belongs to this veterinarian
-	client, err := c.clientRepo.FindByID(r.Context(), existingPet.OwnerID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "Failed to verify client ownership")
-		return
-	}
-
-	if client == nil {
-		writeError(w, http.StatusNotFound, "Client not found")
-		return
-	}
-
-	if err := validateResourceOwnership(client.VetID, userID); err != nil {
-		writeError(w, http.StatusForbidden, "Access denied")
+	if _, err := verifyClientOwnership(r.Context(), c.clientRepo, existingPet.OwnerID, userID); err != nil {
+		writeClientOwnershipError(w, err)
 		return
 	}
 
@@ -311,7 +277,7 @@ func (c *PetController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(pet)
+	_ = json.NewEncoder(w).Encode(pet)
 }
 
 // Delete godoc
@@ -353,19 +319,8 @@ func (c *PetController) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify the client owner belongs to this veterinarian
-	client, err := c.clientRepo.FindByID(r.Context(), pet.OwnerID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "Failed to verify client ownership")
-		return
-	}
-
-	if client == nil {
-		writeError(w, http.StatusNotFound, "Client not found")
-		return
-	}
-
-	if err := validateResourceOwnership(client.VetID, userID); err != nil {
-		writeError(w, http.StatusForbidden, "Access denied")
+	if _, err := verifyClientOwnership(r.Context(), c.clientRepo, pet.OwnerID, userID); err != nil {
+		writeClientOwnershipError(w, err)
 		return
 	}
 

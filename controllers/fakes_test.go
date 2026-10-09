@@ -88,6 +88,9 @@ func (r *fakeUserRepo) UpdateUser(_ context.Context, _ primitive.ObjectID, _ map
 
 type fakeClientRepo struct {
 	items map[primitive.ObjectID]*models.Client
+	// findByIDErr, when set, is returned by FindByID instead of a lookup result,
+	// letting tests exercise the DB-error branch of verifyClientOwnership.
+	findByIDErr error
 }
 
 var _ repositories.ClientRepository = (*fakeClientRepo)(nil)
@@ -106,6 +109,9 @@ func (r *fakeClientRepo) Create(_ context.Context, client *models.Client) error 
 }
 
 func (r *fakeClientRepo) FindByID(_ context.Context, id primitive.ObjectID) (*models.Client, error) {
+	if r.findByIDErr != nil {
+		return nil, r.findByIDErr
+	}
 	client, ok := r.items[id]
 	if !ok {
 		return nil, nil

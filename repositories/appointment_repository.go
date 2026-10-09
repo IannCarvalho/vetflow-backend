@@ -50,7 +50,7 @@ func (r *mongoAppointmentRepository) FindByVetID(ctx context.Context, vetID prim
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var appointments []*models.Appointment
 	if err = cursor.All(ctx, &appointments); err != nil {
@@ -73,7 +73,7 @@ func (r *mongoAppointmentRepository) FindByVetIDInRange(ctx context.Context, vet
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var appointments []*models.Appointment
 	if err = cursor.All(ctx, &appointments); err != nil {
@@ -89,7 +89,7 @@ func (r *mongoAppointmentRepository) FindByPetID(ctx context.Context, petID prim
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var appointments []*models.Appointment
 	if err = cursor.All(ctx, &appointments); err != nil {

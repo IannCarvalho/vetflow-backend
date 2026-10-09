@@ -88,7 +88,7 @@ func (c *AttachmentController) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(attachment)
+	_ = json.NewEncoder(w).Encode(attachment)
 }
 
 // GetAll godoc
@@ -137,7 +137,7 @@ func (c *AttachmentController) GetAll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(summaries)
+	_ = json.NewEncoder(w).Encode(summaries)
 }
 
 // GetContent godoc
@@ -180,7 +180,7 @@ func (c *AttachmentController) GetContent(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(attachment)
+	_ = json.NewEncoder(w).Encode(attachment)
 }
 
 // Update godoc
@@ -256,7 +256,7 @@ func (c *AttachmentController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "Anexo atualizado com sucesso"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "Anexo atualizado com sucesso"})
 }
 
 // Delete godoc
