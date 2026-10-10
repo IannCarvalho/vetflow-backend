@@ -59,10 +59,17 @@ func TestDashboardStatsCountsSeededData(t *testing.T) {
 	_ = invoiceRepo.Create(ctx, &models.Invoice{VetID: vetA, Status: models.PaymentPending})
 	_ = invoiceRepo.Create(ctx, &models.Invoice{VetID: vetA, Status: models.PaymentPaid})
 
-	// Appointments: 2 today, 1 tomorrow.
-	_ = appointmentRepo.Create(ctx, &models.Appointment{VetID: vetA, StartTime: now})
-	_ = appointmentRepo.Create(ctx, &models.Appointment{VetID: vetA, StartTime: now.Add(2 * time.Hour)})
-	_ = appointmentRepo.Create(ctx, &models.Appointment{VetID: vetA, StartTime: now.AddDate(0, 0, 1)})
+	// Appointments: 2 today, 1 tomorrow. Anchor to fixed intra-day times so the
+	// "today" window stays stable regardless of what time the suite runs (a
+	// now.Add(2h) seed rolls past midnight when run late in the day, which made
+	// this test flaky). The dashboard buckets by calendar day via sameDay().
+	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	todayMorning := startOfToday.Add(9 * time.Hour)
+	todayAfternoon := startOfToday.Add(15 * time.Hour)
+	tomorrowNoon := startOfToday.AddDate(0, 0, 1).Add(12 * time.Hour)
+	_ = appointmentRepo.Create(ctx, &models.Appointment{VetID: vetA, StartTime: todayMorning})
+	_ = appointmentRepo.Create(ctx, &models.Appointment{VetID: vetA, StartTime: todayAfternoon})
+	_ = appointmentRepo.Create(ctx, &models.Appointment{VetID: vetA, StartTime: tomorrowNoon})
 
 	req := httptest.NewRequest(http.MethodGet, "/dashboard/stats", nil)
 	req = withUserID(req, vetA)

@@ -21,6 +21,15 @@ import (
 // server does not wipe records created during use. Set SEED_FORCE=true to force
 // a clean re-seed (drops all collections first).
 func SeedDatabase(db *mongo.Database) error {
+	// Defense in depth: refuse to seed in production even if a caller invokes
+	// this directly. The seed inserts fixed demo accounts with a well-known
+	// password, so running it against a live database is a credential backdoor.
+	appEnv := strings.ToLower(os.Getenv("APP_ENV"))
+	if appEnv == "production" || appEnv == "prod" {
+		log.Println("Refusing to seed database in production environment (APP_ENV=" + appEnv + ")")
+		return nil
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -105,7 +114,7 @@ func seedTestData(db *mongo.Database, ctx context.Context) error {
 	if _, err := db.Collection("users").InsertMany(ctx, []interface{}{vet1, vet2}); err != nil {
 		return err
 	}
-	log.Printf("Created 2 test users (dr.joao@vetflow.com / dra.maria@vetflow.com - senha: 123456)")
+	log.Printf("Created 2 test users")
 
 	// --- Clients -----------------------------------------------------------
 	type clientSpec struct {

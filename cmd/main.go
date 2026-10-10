@@ -67,12 +67,18 @@ func main() {
 	log.Println("[MAIN] Getting database instance...")
 	database := client.Database(cfg.MongoDB)
 
-	// Seed database (creates indexes and initial data)
-	log.Println("[MAIN] Starting database seed...")
-	if err := db.SeedDatabase(database); err != nil {
-		log.Printf("[MAIN] WARNING: Database seed encountered an issue: %v\n", err)
+	// Seed database (creates indexes and initial data). NEVER seed in
+	// production: the seed inserts fixed demo accounts with a well-known
+	// password, which would be a credential backdoor in a live environment.
+	if cfg.IsProduction() {
+		log.Println("[MAIN] Production environment detected - skipping database seed")
+	} else {
+		log.Println("[MAIN] Starting database seed...")
+		if err := db.SeedDatabase(database); err != nil {
+			log.Printf("[MAIN] WARNING: Database seed encountered an issue: %v\n", err)
+		}
+		log.Println("[MAIN] Database seed completed")
 	}
-	log.Println("[MAIN] Database seed completed")
 
 	// Ensure non-unique indexes for vet-scoped and lookup queries. Index
 	// creation must never block boot, so failures are only logged.
