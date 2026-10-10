@@ -106,13 +106,14 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 
 	// Auth routes
 	r.Route("/auth", func(r chi.Router) {
-		// Rate-limit only the credential endpoints to blunt brute-force; the
-		// social/oauth/verify routes are left untouched.
+		// Rate-limit the credential and identity endpoints to blunt
+		// brute-force and token-replay abuse. The email-verify link is also
+		// throttled since the token is guessable-adjacent and replay-prone.
 		r.With(authLimiter).Post("/register", authController.Register)
 		r.With(authLimiter).Post("/login", authController.Login)
-		r.Post("/social-login", socialAuthController.SocialLogin)
-		r.Post("/oauth/callback", oauthCallbackController.OAuthCallback)
-		r.Get("/verify/{token}", authController.Verify)
+		r.With(authLimiter).Post("/social-login", socialAuthController.SocialLogin)
+		r.With(authLimiter).Post("/oauth/callback", oauthCallbackController.OAuthCallback)
+		r.With(authLimiter).Get("/verify/{token}", authController.Verify)
 	})
 
 	// User routes (protected)

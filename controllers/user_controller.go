@@ -9,7 +9,6 @@ import (
 
 	"github.com/vetflow/veterinary-api/helpers"
 	"github.com/vetflow/veterinary-api/repositories"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // UserController handles user-related operations
@@ -36,12 +35,12 @@ func NewUserController(userRepository repositories.UserRepository) *UserControll
 // @Failure 401 {object} map[string]string
 // @Router /users/profile [put]
 func (c *UserController) UpdateProfile(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value("userID").(string)
-	if !ok || userID == "" {
+	objID, err := getUserIDFromContext(r.Context())
+	if err != nil {
 		writeError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
-	log.Printf("UpdateProfile: userID=%s", userID)
+	log.Printf("UpdateProfile: userID=%s", objID.Hex())
 
 	var req struct {
 		Name  string `json:"name"`
@@ -60,13 +59,6 @@ func (c *UserController) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Email == "" {
 		writeError(w, http.StatusBadRequest, "Email is required")
-		return
-	}
-
-	// Convert userID string to ObjectID
-	objID, err := primitive.ObjectIDFromHex(userID)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
@@ -104,8 +96,8 @@ func (c *UserController) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} map[string]string
 // @Router /users/profile-picture [put]
 func (c *UserController) UpdateProfilePicture(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value("userID").(string)
-	if !ok || userID == "" {
+	objID, err := getUserIDFromContext(r.Context())
+	if err != nil {
 		writeError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -127,13 +119,6 @@ func (c *UserController) UpdateProfilePicture(w http.ResponseWriter, r *http.Req
 	// Validate base64 length (limit to ~5MB encoded)
 	if len(req.ProfilePicture) > 6*1024*1024 {
 		writeError(w, http.StatusBadRequest, "Profile picture too large")
-		return
-	}
-
-	// Convert userID string to ObjectID
-	objID, err := primitive.ObjectIDFromHex(userID)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
@@ -167,16 +152,9 @@ func (c *UserController) UpdateProfilePicture(w http.ResponseWriter, r *http.Req
 // @Failure 401 {object} map[string]string
 // @Router /users/profile-picture [delete]
 func (c *UserController) RemoveProfilePicture(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value("userID").(string)
-	if !ok || userID == "" {
-		writeError(w, http.StatusUnauthorized, "Unauthorized")
-		return
-	}
-
-	// Convert userID string to ObjectID
-	objID, err := primitive.ObjectIDFromHex(userID)
+	objID, err := getUserIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid user ID")
+		writeError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
@@ -213,8 +191,8 @@ func (c *UserController) RemoveProfilePicture(w http.ResponseWriter, r *http.Req
 // @Failure 401 {object} map[string]string
 // @Router /users/password [put]
 func (c *UserController) ChangePassword(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value("userID").(string)
-	if !ok || userID == "" {
+	objID, err := getUserIDFromContext(r.Context())
+	if err != nil {
 		writeError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -240,13 +218,6 @@ func (c *UserController) ChangePassword(w http.ResponseWriter, r *http.Request) 
 	}
 	if len(req.NewPassword) < 8 {
 		writeError(w, http.StatusBadRequest, "New password must be at least 8 characters")
-		return
-	}
-
-	// Convert userID string to ObjectID
-	objID, err := primitive.ObjectIDFromHex(userID)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
@@ -312,8 +283,8 @@ func (c *UserController) ChangePassword(w http.ResponseWriter, r *http.Request) 
 // @Failure 401 {object} map[string]string
 // @Router /users/password/set [put]
 func (c *UserController) SetPassword(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value("userID").(string)
-	if !ok || userID == "" {
+	objID, err := getUserIDFromContext(r.Context())
+	if err != nil {
 		writeError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -334,13 +305,6 @@ func (c *UserController) SetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(req.Password) < 8 {
 		writeError(w, http.StatusBadRequest, "Password must be at least 8 characters")
-		return
-	}
-
-	// Convert userID string to ObjectID
-	objID, err := primitive.ObjectIDFromHex(userID)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 

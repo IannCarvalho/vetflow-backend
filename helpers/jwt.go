@@ -11,15 +11,19 @@ import (
 // tokenTTL is how long an issued token stays valid.
 const tokenTTL = 24 * time.Hour
 
-// jwtSecret returns the signing secret from the environment.
-// A default is used only as a last resort so local development does not crash;
-// production MUST set JWT_SECRET.
-func jwtSecret() []byte {
+// errNoJWTSecret is returned when JWT_SECRET is not configured. The app must
+// never fall back to a well-known development secret: a predictable signing key
+// lets anyone forge valid tokens for any user.
+var errNoJWTSecret = errors.New("JWT_SECRET is not set; refusing to sign or verify tokens with a default secret")
+
+// jwtSecret returns the signing secret from the environment, or an error when
+// it is unset. Fails closed in every environment — there is no fallback secret.
+func jwtSecret() ([]byte, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		secret = "vetflow-dev-secret-change-me"
+		return nil, errNoJWTSecret
 	}
-	return []byte(secret)
+	return []byte(secret), nil
 }
 
 // Claims is the set of data embedded in the JWT.
@@ -41,7 +45,11 @@ func GenerateToken(userID string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret())
+	secret, err := jwtSecret()
+	if err != nil {
+		return "", err
+	}
+	return token.SignedString(secret)
 }
 
 // ParseToken validates a token string and returns its claims.
@@ -53,7 +61,7 @@ func ParseToken(tokenString string) (*Claims, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
-		return jwtSecret(), nil
+		return jwtSecret()
 	})
 	if err != nil {
 		return nil, err

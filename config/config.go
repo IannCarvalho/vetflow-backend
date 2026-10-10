@@ -64,12 +64,13 @@ func LoadConfig() *Config {
 	return config
 }
 
-// Validate checks that required configuration is present. In production a
-// dedicated JWT_SECRET is mandatory; the app must refuse to start without it
-// rather than silently signing tokens with a well-known development secret.
+// Validate checks that required configuration is present. A dedicated
+// JWT_SECRET is mandatory in EVERY environment: the app must refuse to start
+// without it rather than silently signing tokens with a well-known default
+// secret (which would let anyone forge valid tokens for any user).
 func (c *Config) Validate() error {
-	if c.IsProduction() && c.JWTSecret == "" {
-		return fmt.Errorf("JWT_SECRET must be set in production (APP_ENV=%s)", c.AppEnv)
+	if c.JWTSecret == "" {
+		return fmt.Errorf("JWT_SECRET must be set (APP_ENV=%s); refusing to start without a signing secret", c.AppEnv)
 	}
 	return nil
 }

@@ -146,11 +146,21 @@ func TestConfig_Validate_ProductionWithJWTSecretOK(t *testing.T) {
 	}
 }
 
-func TestConfig_Validate_DevelopmentAllowsEmptySecret(t *testing.T) {
+func TestConfig_Validate_DevelopmentRequiresJWTSecret(t *testing.T) {
+	// Fail-closed in EVERY environment: even development must not fall back to
+	// a well-known default signing secret.
 	cfg := &Config{AppEnv: "development", JWTSecret: ""}
 
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected Validate() to fail in development without JWT_SECRET")
+	}
+}
+
+func TestConfig_Validate_DevelopmentWithJWTSecretOK(t *testing.T) {
+	cfg := &Config{AppEnv: "development", JWTSecret: "a-long-random-secret"}
+
 	if err := cfg.Validate(); err != nil {
-		t.Fatalf("expected Validate() to pass in development without JWT_SECRET, got %v", err)
+		t.Fatalf("expected Validate() to pass in development with JWT_SECRET, got %v", err)
 	}
 }
 

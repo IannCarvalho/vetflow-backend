@@ -2,6 +2,8 @@ package controllers
 
 import (
 	"context"
+	"os"
+	"testing"
 	"time"
 
 	"github.com/vetflow/veterinary-api/models"
@@ -9,6 +11,17 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
+
+// TestMain configures a JWT signing secret for the whole controllers test
+// package. Token signing/verification now fails closed when JWT_SECRET is unset
+// (no insecure dev fallback), so tests that issue tokens (register/login/social)
+// must provide one. This sets a throwaway secret for tests only.
+func TestMain(m *testing.M) {
+	if os.Getenv("JWT_SECRET") == "" {
+		os.Setenv("JWT_SECRET", "test-only-jwt-secret-not-for-production")
+	}
+	os.Exit(m.Run())
+}
 
 // This file provides in-memory fake repositories backed by maps, satisfying the
 // interfaces in repositories/interfaces.go. They mirror the mongo repos'

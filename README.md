@@ -554,3 +554,38 @@ For issues or questions, please open an issue in the repository.
 ---
 
 **Built with Go, MongoDB, and ❤️ for veterinary professionals.**
+
+
+## Git Hooks — Merge Conflict Marker Gate
+
+This repo ships a tracked `pre-commit` hook that refuses any commit containing
+unresolved git merge conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`). The same
+check runs in CI as the `no-conflict-markers` job in
+`.github/workflows/ci.yml`, so a commit that passes locally also passes CI.
+
+### Activate the hook (once per clone)
+
+The hook lives in the tracked `.githooks/` directory (git does not share
+`.git/hooks`). Point git at it with the provided script:
+
+```bash
+# macOS / Linux / Git Bash
+bash scripts/install-hooks.sh
+```
+
+```powershell
+# Windows PowerShell
+powershell -ExecutionPolicy Bypass -File scripts\install-hooks.ps1
+```
+
+Both do the same thing: `git config core.hooksPath .githooks`. Git for Windows
+runs the bash hook through its bundled `sh`, so no extra setup is required.
+
+### Behaviour
+
+- On `git commit`, the hook scans the **staged** content of every added/modified
+  file. If any still contains a conflict marker, the commit is aborted and the
+  offending `file:line` locations are printed.
+- Emergency bypass (discouraged): `git commit --no-verify`.
+- The gate is enforced regardless of the hook in CI, so a bypassed local commit
+  is still rejected on push / pull request.

@@ -34,8 +34,8 @@ func NewOAuthCallbackController(userRepo repositories.UserRepository) *OAuthCall
 // @Router /auth/oauth/callback [post]
 func (c *OAuthCallbackController) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Provider string                 `json:"provider"`
-		UserData map[string]interface{} `json:"userData"`
+		Provider string `json:"provider"`
+		Token    string `json:"token"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -44,35 +44,21 @@ func (c *OAuthCallbackController) OAuthCallback(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	log.Printf("OAuth callback request: provider=%s, userData_present=%v", req.Provider, len(req.UserData) > 0)
+	log.Printf("OAuth callback request: provider=%s", req.Provider)
 
-	// Simply validate and create/login user via email
-	// The frontend should already have the user data from the OAuth provider
-	if len(req.UserData) == 0 {
-		writeError(w, http.StatusBadRequest, "User data not provided")
+	// SECURITY: validate the provider's ID token server-side and derive the
+	// identity from the VERIFIED claims only. Never trust client-supplied
+	// profile data, and never issue a hardcoded/dummy token.
+	identity, err := verifyProviderToken(req.Provider, req.Token)
+	if err != nil {
+		log.Printf("OAuth callback rejected: %v", err)
+		writeError(w, http.StatusUnauthorized, "Could not verify provider token")
 		return
 	}
 
-	// Extract email
-	var email string
-	if emailVal, ok := req.UserData["email"].(string); ok {
-		email = emailVal
-	}
-
-	if email == "" {
-		writeError(w, http.StatusBadRequest, "Email not available from provider")
-		return
-	}
-
-	name := ""
-	if nameVal, ok := req.UserData["name"].(string); ok {
-		name = nameVal
-	}
-
-	picture := ""
-	if pictureVal, ok := req.UserData["picture"].(string); ok {
-		picture = pictureVal
-	}
+	email := identity.Email
+	name := identity.Name
+	picture := identity.Picture
 
 	ctx := r.Context()
 
@@ -96,7 +82,7 @@ func (c *OAuthCallbackController) OAuthCallback(w http.ResponseWriter, r *http.R
 			}
 		}
 
-		// Create new user with data from provider
+		// Create new user with data from the verified provider claims
 		user = &models.User{
 			Name:           name,
 			Email:          email,
@@ -112,10 +98,17 @@ func (c *OAuthCallbackController) OAuthCallback(w http.ResponseWriter, r *http.R
 		log.Printf("User created successfully: id=%s, email=%s", user.ID.Hex(), email)
 	}
 
+	// Issue a real signed JWT scoped to this user.
+	token, err := helpers.GenerateToken(user.ID.Hex())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to generate token")
+		return
+	}
+
 	// Return auth response
 	response := models.AuthResponse{
 		User:  user,
-		Token: "dummy_token_123", // TODO: Replace with actual JWT
+		Token: token,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

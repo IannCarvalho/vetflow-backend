@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+#
+# pre-commit hook: reject git merge conflict markers.
+#
+# Fails the commit if any file about to be committed still contains an
+# unresolved conflict marker (<<<<<<<, =======, >>>>>>>). This is the same
+# check run in CI (.github/workflows/ci.yml, job "no-conflict-markers"), so a
+# commit that passes locally will also pass the gate in CI.
+#
+# Install with:  bash scripts/install-hooks.sh      (or scripts/install-hooks.ps1 on Windows)
+# which sets  git config core.hooksPath .githooks
+
+set -euo pipefail
+
+# Regex matches a line that is ONLY a conflict marker. The trailing ([^=]|$)
+# avoids matching legitimate "=======" markdown rules etc. while still catching
+# the 7-char git marker lines.
+marker_re='^(<{7}|={7}|>{7})([^=]|$)'
+
+# Only inspect files that are actually staged for this commit, restricted to
+# text content (added/copied/modified/renamed). Deleted files are skipped.
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+
+if [ -z "$staged" ]; then
+  exit 0
+fi
+
+found=0
+while IFS= read -r file; do
+  [ -z "$file" ] && continue
+  # Scan the staged blob (what will actually be committed), not the worktree.
+  if git show ":$file" 2>/dev/null | grep -nE "$marker_re" >/dev/null 2>&1; then
+    echo "error: unresolved merge conflict marker in: $file" >&2
+    git show ":$file" | grep -nE "$marker_re" | sed "s|^|  $file:|" >&2
+    found=1
+  fi
+done <<< "$staged"
+
+if [ "$found" -ne 0 ]; then
+  echo "" >&2
+  echo "Commit aborted: resolve the merge conflict markers above and 'git add' the files." >&2
+  echo "(To bypass in an emergency: git commit --no-verify)" >&2
+  exit 1
+fi
+
+exit 0

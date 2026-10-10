@@ -62,12 +62,31 @@ func CreateIndexes(ctx context.Context, db *mongo.Database) error {
 		"notifications": {SingleFields: []string{"vet_id"}},
 	}
 
+	// compositeIndexes maps a collection name to the composite (multi-field)
+	// indexes that back vet-scoped, time/date-ordered LIST queries. These sit
+	// alongside the count-oriented Compound indexes declared above: each key is
+	// a bson.D so field order and sort direction are preserved. Field names
+	// match the models' BSON tags:
+	//   invoices.issue_date, consultations.date, vaccines.date_applied,
+	//   prescriptions.date.
+	compositeIndexes := map[string][]bson.D{
+		"invoices":      {{{Key: "vet_id", Value: 1}, {Key: "issue_date", Value: -1}}},
+		"consultations": {{{Key: "vet_id", Value: 1}, {Key: "date", Value: -1}}},
+		"vaccines":      {{{Key: "vet_id", Value: 1}, {Key: "date_applied", Value: -1}}},
+		"prescriptions": {{{Key: "vet_id", Value: 1}, {Key: "date", Value: -1}}},
+	}
+
 	for name, spec := range collectionIndexes {
-		models := make([]mongo.IndexModel, 0, len(spec.SingleFields)+len(spec.Compound))
+		models := make([]mongo.IndexModel, 0, len(spec.SingleFields)+len(spec.Compound)+len(compositeIndexes[name]))
 
 		for _, field := range spec.SingleFields {
 			models = append(models, mongo.IndexModel{
 				Keys: bson.D{{Key: field, Value: 1}},
+			})
+		}
+		for _, keys := range compositeIndexes[name] {
+			models = append(models, mongo.IndexModel{
+				Keys: keys,
 			})
 		}
 
