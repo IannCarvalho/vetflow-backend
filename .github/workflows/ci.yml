@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  no-conflict-markers:
+    name: Reject merge conflict markers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Fail the build if any tracked file still contains a git conflict marker.
+      # git grep exits 0 when it finds matches, so invert: markers found => fail.
+      - name: Scan for conflict markers
+        run: |
+          if git grep -nE '^(<{7}|={7}|>{7})([^=]|$)' -- . ; then
+            echo "::error::Unresolved merge conflict markers found (see above)."
+            exit 1
+          fi
+          echo "No conflict markers found."
+
+  build-test:
+    name: Build & test
+    runs-on: ubuntu-latest
+    needs: no-conflict-markers
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Build
+        run: go build ./...
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        env:
+          JWT_SECRET: ci-only-test-secret
+        run: go test ./...

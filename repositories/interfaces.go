@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"time"
 
 	"github.com/vetflow/veterinary-api/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -21,6 +22,7 @@ type ClientRepository interface {
 type PetRepository interface {
 	Create(ctx context.Context, pet *models.Pet) error
 	FindByID(ctx context.Context, id primitive.ObjectID) (*models.Pet, error)
+	FindByIDs(ctx context.Context, ids []primitive.ObjectID) ([]*models.Pet, error)
 	FindAll(ctx context.Context) ([]*models.Pet, error)
 	FindByOwnerID(ctx context.Context, ownerID primitive.ObjectID) ([]*models.Pet, error)
 	FindByVetID(ctx context.Context, vetID primitive.ObjectID) ([]*models.Pet, error)
@@ -53,9 +55,69 @@ type VaccineRepository interface {
 	DeleteByPetID(ctx context.Context, petID primitive.ObjectID) error
 }
 
+// PrescriptionRepository defines operations for prescription (receituário) data
+type PrescriptionRepository interface {
+	Create(ctx context.Context, prescription *models.Prescription) error
+	FindByID(ctx context.Context, id primitive.ObjectID) (*models.Prescription, error)
+	FindByVetID(ctx context.Context, vetID primitive.ObjectID) ([]*models.Prescription, error)
+	FindByPetID(ctx context.Context, petID primitive.ObjectID) ([]*models.Prescription, error)
+	Update(ctx context.Context, id primitive.ObjectID, prescription *models.Prescription) error
+	Delete(ctx context.Context, id primitive.ObjectID) error
+	DeleteByPetID(ctx context.Context, petID primitive.ObjectID) error
+}
+
+// AttachmentRepository defines operations for attachment (exams/files) data
+type AttachmentRepository interface {
+	Create(ctx context.Context, attachment *models.Attachment) error
+	FindByID(ctx context.Context, id primitive.ObjectID) (*models.Attachment, error)
+	// FindSummariesByPetID lists attachments for a pet WITHOUT the heavy base64
+	// content, so listings stay lightweight.
+	FindSummariesByPetID(ctx context.Context, petID primitive.ObjectID) ([]*models.AttachmentSummary, error)
+	Update(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) error
+	Delete(ctx context.Context, id primitive.ObjectID) error
+	DeleteByPetID(ctx context.Context, petID primitive.ObjectID) error
+}
+
+// CatalogItemRepository defines operations for catalog (services/products) data
+type CatalogItemRepository interface {
+	Create(ctx context.Context, item *models.CatalogItem) error
+	FindByID(ctx context.Context, id primitive.ObjectID) (*models.CatalogItem, error)
+	FindByVetID(ctx context.Context, vetID primitive.ObjectID) ([]*models.CatalogItem, error)
+	Update(ctx context.Context, id primitive.ObjectID, item *models.CatalogItem) error
+	Delete(ctx context.Context, id primitive.ObjectID) error
+}
+
+// InvoiceRepository defines operations for invoice (financeiro) data
+type InvoiceRepository interface {
+	Create(ctx context.Context, invoice *models.Invoice) error
+	FindByID(ctx context.Context, id primitive.ObjectID) (*models.Invoice, error)
+	FindByVetID(ctx context.Context, vetID primitive.ObjectID) ([]*models.Invoice, error)
+	FindByClientID(ctx context.Context, clientID primitive.ObjectID) ([]*models.Invoice, error)
+	Update(ctx context.Context, id primitive.ObjectID, invoice *models.Invoice) error
+	Delete(ctx context.Context, id primitive.ObjectID) error
+	DeleteByClientID(ctx context.Context, clientID primitive.ObjectID) error
+}
+
+// AppointmentRepository defines operations for appointment (agenda) data
+type AppointmentRepository interface {
+	Create(ctx context.Context, appointment *models.Appointment) error
+	FindByID(ctx context.Context, id primitive.ObjectID) (*models.Appointment, error)
+	FindByVetID(ctx context.Context, vetID primitive.ObjectID) ([]*models.Appointment, error)
+	FindByVetIDInRange(ctx context.Context, vetID primitive.ObjectID, start, end time.Time) ([]*models.Appointment, error)
+	FindByPetID(ctx context.Context, petID primitive.ObjectID) ([]*models.Appointment, error)
+	Update(ctx context.Context, id primitive.ObjectID, appointment *models.Appointment) error
+	Delete(ctx context.Context, id primitive.ObjectID) error
+	DeleteByPetID(ctx context.Context, petID primitive.ObjectID) error
+	DeleteByClientID(ctx context.Context, clientID primitive.ObjectID) error
+}
+
 // NotificationRepository defines operations for notification data
 type NotificationRepository interface {
 	Create(ctx context.Context, notification *models.Notification) error
+	// ExistsPending reports whether a pending notification already exists for the
+	// given vet/resource/type/target date, used to avoid creating duplicates on
+	// repeated sweeps.
+	ExistsPending(ctx context.Context, vetID primitive.ObjectID, resourceID string, nType models.NotificationType, targetDate time.Time) (bool, error)
 	GetByVetID(ctx context.Context, vetID primitive.ObjectID) ([]models.Notification, error)
 	GetPending(ctx context.Context, vetID primitive.ObjectID) ([]models.Notification, error)
 	UpdateStatus(ctx context.Context, id primitive.ObjectID, status models.NotificationStatus) error

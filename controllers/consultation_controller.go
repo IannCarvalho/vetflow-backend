@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -35,6 +36,12 @@ func NewConsultationController(repo repositories.ConsultationRepository) *Consul
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /consultations [post]
 func (c *ConsultationController) Create(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
 	var consultation models.Consultation
 	if err := json.NewDecoder(r.Body).Decode(&consultation); err != nil {
 		writeErrorWithDetails(w, http.StatusBadRequest, "Falha ao decodificar corpo da requisição", err.Error(), "INVALID_JSON")
@@ -46,6 +53,9 @@ func (c *ConsultationController) Create(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Scope the consultation to the authenticated vet so listing by vet works
+	// and records cannot be attributed to another vet by the client.
+	consultation.VetID = userID
 	consultation.CreatedAt = time.Now()
 
 	if err := c.repo.Create(r.Context(), &consultation); err != nil {
@@ -178,6 +188,12 @@ func (c *ConsultationController) GetAllPublic(w http.ResponseWriter, r *http.Req
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /consultations/{id} [get]
 func (c *ConsultationController) GetByID(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
 	id := chi.URLParam(r, "id")
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -196,36 +212,95 @@ func (c *ConsultationController) GetByID(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Only expose consultations that belong to the authenticated vet. Legacy
+	// records with a zero VetID remain visible until re-saved.
+	if !consultation.VetID.IsZero() {
+		if err := validateResourceOwnership(consultation.VetID, userID); err != nil {
+			writeError(w, http.StatusForbidden, err.Error())
+			return
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(consultation)
 }
 
-// GetByPetID handles GET /consultations?pet_id={petId}
-func (c *ConsultationController) GetByPetID(w http.ResponseWriter, r *http.Request) {
-	petID := r.URL.Query().Get("pet_id")
-	if petID == "" {
-		writeError(w, http.StatusBadRequest, "pet_id query parameter is required")
-		return
-	}
-
-	objectID, err := primitive.ObjectIDFromHex(petID)
+// PrescriptionDraft godoc
+// @Summary Build a prescription draft from a consultation
+// @Description Returns an unsaved prescription (receituário) pre-filled from the consultation: pet_id, consultation_id, today's date and general notes seeded from the main complaint and any medications noted in the summary. The client edits it and persists it with POST /prescriptions. Must belong to the authenticated vet.
+// @Tags Consultations
+// @Accept json
+// @Produce json
+// @Param id path string true "Consultation ID"
+// @Success 200 {object} models.Prescription
+// @Failure 400 {object} map[string]string "Invalid ID"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Consultation not found"
+// @Failure 500 {object} map[string]string "Server error"
+// @Router /consultations/{id}/prescription-draft [get]
+func (c *ConsultationController) PrescriptionDraft(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid pet_id format")
+		writeError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
 
-	consultations, err := c.repo.FindByPetID(r.Context(), objectID)
+	objectID, err := primitive.ObjectIDFromHex(chi.URLParam(r, "id"))
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "Failed to retrieve consultations")
+		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de consulta inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
 		return
 	}
 
-	if consultations == nil {
-		consultations = make([]*models.Consultation, 0)
+	consultation, err := c.repo.FindByID(r.Context(), objectID)
+	if err != nil {
+		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar consulta", err.Error(), "DB_QUERY_ERROR")
+		return
 	}
+	if consultation == nil {
+		writeErrorWithDetails(w, http.StatusNotFound, "Consulta não encontrada", "Nenhuma consulta com este ID existe no banco de dados", "CONSULTATION_NOT_FOUND")
+		return
+	}
+	// Legacy records with a zero VetID remain accessible; otherwise block drafting
+	// from another vet's consultation.
+	if !consultation.VetID.IsZero() {
+		if err := validateResourceOwnership(consultation.VetID, userID); err != nil {
+			writeError(w, http.StatusForbidden, err.Error())
+			return
+		}
+	}
+
+	draft := buildPrescriptionDraft(consultation)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(consultations)
+	json.NewEncoder(w).Encode(draft)
+}
+
+// buildPrescriptionDraft assembles an unsaved prescription seeded from a
+// consultation. It intentionally leaves the ID and VetID zero: the draft is not
+// persisted here, and POST /prescriptions sets VetID from the token on save. A
+// single empty item is included so the client has a row to start editing.
+func buildPrescriptionDraft(consultation *models.Consultation) models.Prescription {
+	var notes strings.Builder
+	if complaint := strings.TrimSpace(consultation.Anamnesis.MainComplaint); complaint != "" {
+		notes.WriteString("Queixa principal: ")
+		notes.WriteString(complaint)
+	}
+	if meds := strings.TrimSpace(consultation.Summary.Medications); meds != "" {
+		if notes.Len() > 0 {
+			notes.WriteString("\n")
+		}
+		notes.WriteString("Medicações em uso: ")
+		notes.WriteString(meds)
+	}
+
+	return models.Prescription{
+		PetID:          consultation.PetID,
+		ConsultationID: consultation.ID,
+		Date:           time.Now(),
+		Items:          []models.PrescriptionItem{{}},
+		GeneralNotes:   notes.String(),
+	}
 }
 
 // Update godoc
@@ -242,11 +317,36 @@ func (c *ConsultationController) GetByPetID(w http.ResponseWriter, r *http.Reque
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /consultations/{id} [put]
 func (c *ConsultationController) Update(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
 	id := chi.URLParam(r, "id")
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de consulta inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
 		return
+	}
+
+	// Ensure the consultation exists and belongs to the authenticated vet.
+	existing, err := c.repo.FindByID(r.Context(), objectID)
+	if err != nil {
+		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar consulta", err.Error(), "DB_QUERY_ERROR")
+		return
+	}
+	if existing == nil {
+		writeErrorWithDetails(w, http.StatusNotFound, "Consulta não encontrada", "Nenhuma consulta com este ID existe no banco de dados", "CONSULTATION_NOT_FOUND")
+		return
+	}
+	// Records created before vet-scoping may have a zero VetID; allow those to
+	// be claimed, but block editing another vet's consultation.
+	if !existing.VetID.IsZero() {
+		if err := validateResourceOwnership(existing.VetID, userID); err != nil {
+			writeError(w, http.StatusForbidden, err.Error())
+			return
+		}
 	}
 
 	var consultation models.Consultation
@@ -261,6 +361,7 @@ func (c *ConsultationController) Update(w http.ResponseWriter, r *http.Request) 
 	}
 
 	consultation.ID = objectID
+	consultation.VetID = userID
 
 	if err := c.repo.Update(r.Context(), objectID, &consultation); err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -288,11 +389,37 @@ func (c *ConsultationController) Update(w http.ResponseWriter, r *http.Request) 
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /consultations/{id} [delete]
 func (c *ConsultationController) Delete(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
 	id := chi.URLParam(r, "id")
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de consulta inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
 		return
+	}
+
+	// Ensure the consultation exists and belongs to the authenticated vet before
+	// deleting, mirroring GetByID/Update.
+	existing, err := c.repo.FindByID(r.Context(), objectID)
+	if err != nil {
+		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar consulta", err.Error(), "DB_QUERY_ERROR")
+		return
+	}
+	if existing == nil {
+		writeErrorWithDetails(w, http.StatusNotFound, "Consulta não encontrada", "Nenhuma consulta com este ID existe no banco de dados", "CONSULTATION_NOT_FOUND")
+		return
+	}
+	// Legacy records with a zero VetID remain deletable; otherwise block removing
+	// another vet's consultation.
+	if !existing.VetID.IsZero() {
+		if err := validateResourceOwnership(existing.VetID, userID); err != nil {
+			writeError(w, http.StatusForbidden, err.Error())
+			return
+		}
 	}
 
 	if err := c.repo.Delete(r.Context(), objectID); err != nil {
@@ -307,10 +434,14 @@ func (c *ConsultationController) Delete(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// validateConsultation validates required fields
+// validateConsultation validates required fields: the pet and a non-empty main
+// complaint in the anamnesis.
 func validateConsultation(consultation *models.Consultation) error {
 	if consultation.PetID.IsZero() {
-		return errValidation("pet_id is required")
+		return errValidationWithDetails("pet_id", "pet é obrigatório")
+	}
+	if strings.TrimSpace(consultation.Anamnesis.MainComplaint) == "" {
+		return errValidationWithDetails("main_complaint", "queixa principal é obrigatória")
 	}
 	return nil
 }

@@ -3,9 +3,11 @@ package controllers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/vetflow/veterinary-api/helpers"
 	"github.com/vetflow/veterinary-api/models"
 	"github.com/vetflow/veterinary-api/repositories"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -17,6 +19,10 @@ type ClientController struct {
 	petRepo          repositories.PetRepository
 	consultationRepo repositories.ConsultationRepository
 	vaccineRepo      repositories.VaccineRepository
+	prescriptionRepo repositories.PrescriptionRepository
+	invoiceRepo      repositories.InvoiceRepository
+	appointmentRepo  repositories.AppointmentRepository
+	attachmentRepo   repositories.AttachmentRepository
 }
 
 // NewClientController creates a new client controller with dependency injection
@@ -25,12 +31,20 @@ func NewClientController(
 	petRepo repositories.PetRepository,
 	consultationRepo repositories.ConsultationRepository,
 	vaccineRepo repositories.VaccineRepository,
+	prescriptionRepo repositories.PrescriptionRepository,
+	invoiceRepo repositories.InvoiceRepository,
+	appointmentRepo repositories.AppointmentRepository,
+	attachmentRepo repositories.AttachmentRepository,
 ) *ClientController {
 	return &ClientController{
 		repo:             repo,
 		petRepo:          petRepo,
 		consultationRepo: consultationRepo,
 		vaccineRepo:      vaccineRepo,
+		prescriptionRepo: prescriptionRepo,
+		invoiceRepo:      invoiceRepo,
+		appointmentRepo:  appointmentRepo,
+		attachmentRepo:   attachmentRepo,
 	}
 }
 
@@ -151,65 +165,6 @@ func (c *ClientController) GetAll(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(clients)
-}
-
-// GetAllPublic godoc (PUBLIC - NO AUTH REQUIRED)
-// @Summary List all clients (public)
-// @Description Retrieve all registered clients (public endpoint)
-// @Tags Clients
-// @Accept json
-// @Produce json
-// @Success 200 {array} models.Client
-// @Failure 500 {object} map[string]string "Server error"
-// @Router /clients [get]
-func (c *ClientController) GetAllPublic(w http.ResponseWriter, r *http.Request) {
-	clients, err := c.repo.FindAll(r.Context())
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar todos os clientes", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-
-	if clients == nil {
-		clients = make([]*models.Client, 0)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(clients)
-}
-
-// GetByIDPublic godoc (PUBLIC - NO AUTH REQUIRED)
-// @Summary Get client by ID (public)
-// @Description Get a specific client by their ID (public endpoint)
-// @Tags Clients
-// @Accept json
-// @Produce json
-// @Param id path string true "Client ID"
-// @Success 200 {object} models.Client
-// @Failure 400 {object} map[string]string "Invalid ID"
-// @Failure 404 {object} map[string]string "Client not found"
-// @Failure 500 {object} map[string]string "Server error"
-// @Router /clients/{id} [get]
-func (c *ClientController) GetByIDPublic(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de cliente inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
-		return
-	}
-
-	client, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar cliente", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-
-	if client == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Cliente não encontrado", "Nenhum cliente com este ID existe no banco de dados", "CLIENT_NOT_FOUND")
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(client)
 }
 
 // Update godoc
@@ -344,6 +299,30 @@ func (c *ClientController) Delete(w http.ResponseWriter, r *http.Request) {
 			writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao deletar vacinas do pet", err.Error(), "DB_DELETE_ERROR")
 			return
 		}
+		if err := c.prescriptionRepo.DeleteByPetID(r.Context(), pet.ID); err != nil {
+			writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao deletar receituários do pet", err.Error(), "DB_DELETE_ERROR")
+			return
+		}
+		if err := c.appointmentRepo.DeleteByPetID(r.Context(), pet.ID); err != nil {
+			writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao deletar agendamentos do pet", err.Error(), "DB_DELETE_ERROR")
+			return
+		}
+		if err := c.attachmentRepo.DeleteByPetID(r.Context(), pet.ID); err != nil {
+			writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao deletar anexos do pet", err.Error(), "DB_DELETE_ERROR")
+			return
+		}
+	}
+
+	// Delete all invoices for this client
+	if err := c.invoiceRepo.DeleteByClientID(r.Context(), objectID); err != nil {
+		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao deletar faturas do cliente", err.Error(), "DB_DELETE_ERROR")
+		return
+	}
+
+	// Delete all appointments directly linked to this client
+	if err := c.appointmentRepo.DeleteByClientID(r.Context(), objectID); err != nil {
+		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao deletar agendamentos do cliente", err.Error(), "DB_DELETE_ERROR")
+		return
 	}
 
 	// Delete all pets for this client
@@ -365,16 +344,21 @@ func (c *ClientController) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// validateClient validates required fields
+// validateClient validates client fields. FullName is required (at least two
+// characters after trimming); CPF, Phone and Address.ZipCode are optional, but
+// when informed they must be well-formed Brazilian values.
 func validateClient(client *models.Client) error {
-	if client.FullName == "" {
-		return errValidation("full_name is required")
+	if len(strings.TrimSpace(client.FullName)) < 2 {
+		return errValidationWithDetails("full_name", "nome completo é obrigatório e deve ter ao menos 2 caracteres")
 	}
-	if client.CPF == "" {
-		return errValidation("cpf is required")
+	if client.CPF != "" && !helpers.IsValidCPF(client.CPF) {
+		return errValidationWithDetails("cpf", "CPF inválido")
 	}
-	if client.Phone == "" {
-		return errValidation("phone is required")
+	if client.Phone != "" && !helpers.IsValidBRPhone(client.Phone) {
+		return errValidationWithDetails("phone", "telefone inválido (use DDD + número, 10 ou 11 dígitos)")
+	}
+	if client.Address.ZipCode != "" && !helpers.IsValidCEP(client.Address.ZipCode) {
+		return errValidationWithDetails("zip_code", "CEP inválido (deve conter 8 dígitos)")
 	}
 	return nil
 }

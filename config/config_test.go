@@ -129,3 +129,54 @@ func TestConfig_String(t *testing.T) {
 		}
 	}
 }
+
+func TestConfig_Validate_ProductionRequiresJWTSecret(t *testing.T) {
+	cfg := &Config{AppEnv: "production", JWTSecret: ""}
+
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected Validate() to fail in production without JWT_SECRET")
+	}
+}
+
+func TestConfig_Validate_ProductionWithJWTSecretOK(t *testing.T) {
+	cfg := &Config{AppEnv: "production", JWTSecret: "a-long-random-secret"}
+
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected Validate() to pass when JWT_SECRET is set, got %v", err)
+	}
+}
+
+func TestConfig_Validate_DevelopmentRequiresJWTSecret(t *testing.T) {
+	// Fail-closed in EVERY environment: even development must not fall back to
+	// a well-known default signing secret.
+	cfg := &Config{AppEnv: "development", JWTSecret: ""}
+
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected Validate() to fail in development without JWT_SECRET")
+	}
+}
+
+func TestConfig_Validate_DevelopmentWithJWTSecretOK(t *testing.T) {
+	cfg := &Config{AppEnv: "development", JWTSecret: "a-long-random-secret"}
+
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected Validate() to pass in development with JWT_SECRET, got %v", err)
+	}
+}
+
+func TestConfig_IsProduction(t *testing.T) {
+	cases := map[string]bool{
+		"production":  true,
+		"prod":        true,
+		"PRODUCTION":  true,
+		"development": false,
+		"":            false,
+		"staging":     false,
+	}
+	for env, want := range cases {
+		cfg := &Config{AppEnv: env}
+		if got := cfg.IsProduction(); got != want {
+			t.Errorf("IsProduction(%q) = %v, want %v", env, got, want)
+		}
+	}
+}

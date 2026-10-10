@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/vetflow/veterinary-api/helpers"
 	"github.com/vetflow/veterinary-api/models"
 	"github.com/vetflow/veterinary-api/repositories"
@@ -56,7 +57,7 @@ func (c *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 	// Save to database
 	ctx := r.Context()
 	if err := c.userRepo.Create(ctx, user); err != nil {
-		if errors.Is(err, errors.New("email already registered")) {
+		if errors.Is(err, repositories.ErrEmailAlreadyRegistered) {
 			writeError(w, http.StatusConflict, "Email already registered")
 			return
 		}
@@ -162,8 +163,31 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} map[string]string
 // @Router /auth/verify/{token} [get]
 func (c *AuthController) Verify(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement JWT verification
+	tokenString := chi.URLParam(r, "token")
+	if tokenString == "" {
+		writeError(w, http.StatusUnauthorized, "Token is required")
+		return
+	}
+
+	// Actually validate the JWT signature and expiry.
+	claims, err := helpers.ParseToken(tokenString)
+	if err != nil || claims.UserID == "" {
+		writeError(w, http.StatusUnauthorized, "Invalid or expired token")
+		return
+	}
+
+	// Confirm the user still exists.
+	user, err := c.userRepo.FindByID(r.Context(), claims.UserID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to verify user")
+		return
+	}
+	if user == nil {
+		writeError(w, http.StatusUnauthorized, "Invalid or expired token")
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Token is valid"})
+	json.NewEncoder(w).Encode(user)
 }

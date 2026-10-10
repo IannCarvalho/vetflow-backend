@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -35,6 +36,12 @@ func NewVaccineController(repo repositories.VaccineRepository) *VaccineControlle
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /vaccines [post]
 func (c *VaccineController) Create(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
 	var vaccine models.Vaccine
 	if err := json.NewDecoder(r.Body).Decode(&vaccine); err != nil {
 		writeErrorWithDetails(w, http.StatusBadRequest, "Falha ao decodificar corpo da requisição", err.Error(), "INVALID_JSON")
@@ -46,6 +53,9 @@ func (c *VaccineController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Scope the vaccine to the authenticated vet so listing by vet and the
+	// notification sweep can find it (and clients can't spoof another vet).
+	vaccine.VetID = userID
 	vaccine.CreatedAt = time.Now()
 
 	if err := c.repo.Create(r.Context(), &vaccine); err != nil {
@@ -116,53 +126,6 @@ func (c *VaccineController) GetAll(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(vaccines)
 }
 
-// GetAllPublic godoc (PUBLIC - NO AUTH REQUIRED)
-// @Summary Get all vaccines (public)
-// @Description Get all vaccines (public endpoint)
-// @Tags Vaccines
-// @Accept json
-// @Produce json
-// @Success 200 {array} models.Vaccine
-// @Failure 500 {object} map[string]string "Server error"
-// @Router /vaccines [get]
-func (c *VaccineController) GetAllPublic(w http.ResponseWriter, r *http.Request) {
-	// When a pet_id filter is provided, return only that pet's vaccines.
-	if petID := r.URL.Query().Get("pet_id"); petID != "" {
-		objectID, err := primitive.ObjectIDFromHex(petID)
-		if err != nil {
-			writeErrorWithDetails(w, http.StatusBadRequest, "Formato de pet_id inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_PET_ID_FORMAT")
-			return
-		}
-
-		vaccines, err := c.repo.FindByPetID(r.Context(), objectID)
-		if err != nil {
-			writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar vacinas", err.Error(), "DB_QUERY_ERROR")
-			return
-		}
-
-		if vaccines == nil {
-			vaccines = make([]*models.Vaccine, 0)
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(vaccines)
-		return
-	}
-
-	vaccines, err := c.repo.FindAll(r.Context())
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar todas as vacinas", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-
-	if vaccines == nil {
-		vaccines = make([]*models.Vaccine, 0)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(vaccines)
-}
-
 // GetByID godoc
 // @Summary Get vaccine by ID
 // @Description Get a specific vaccine by ID
@@ -176,6 +139,12 @@ func (c *VaccineController) GetAllPublic(w http.ResponseWriter, r *http.Request)
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /vaccines/{id} [get]
 func (c *VaccineController) GetByID(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
 	id := chi.URLParam(r, "id")
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -194,81 +163,13 @@ func (c *VaccineController) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(vaccine)
-}
-
-// GetByIDPublic godoc (PUBLIC - NO AUTH REQUIRED)
-// @Summary Get vaccine by ID (public)
-// @Description Get a specific vaccine by ID (public endpoint)
-// @Tags Vaccines
-// @Accept json
-// @Produce json
-// @Param id path string true "Vaccine ID"
-// @Success 200 {object} models.Vaccine
-// @Failure 400 {object} map[string]string "Invalid ID"
-// @Failure 404 {object} map[string]string "Vaccine not found"
-// @Failure 500 {object} map[string]string "Server error"
-// @Router /vaccines/{id} [get]
-func (c *VaccineController) GetByIDPublic(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de vacina inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
-		return
-	}
-
-	vaccine, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar vacina", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-
-	if vaccine == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Vacina não encontrada", "Nenhuma vacina com este ID existe no banco de dados", "VACCINE_NOT_FOUND")
+	if err := validateResourceOwnership(vaccine.VetID, userID); err != nil {
+		writeErrorWithDetails(w, http.StatusForbidden, "Acesso negado", err.Error(), "ACCESS_DENIED")
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(vaccine)
-}
-
-// GetByPetID godoc
-// @Summary List vaccines by pet
-// @Description Get all vaccines for a specific pet
-// @Tags Vaccines
-// @Accept json
-// @Produce json
-// @Param pet_id query string true "Pet ID"
-// @Success 200 {array} models.Vaccine
-// @Failure 400 {object} map[string]string "Invalid pet_id"
-// @Failure 500 {object} map[string]string "Server error"
-// @Router /vaccines [get]
-func (c *VaccineController) GetByPetID(w http.ResponseWriter, r *http.Request) {
-	petID := r.URL.Query().Get("pet_id")
-	if petID == "" {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Parâmetro pet_id ausente", "O parâmetro de query 'pet_id' é obrigatório", "MISSING_PARAM")
-		return
-	}
-
-	objectID, err := primitive.ObjectIDFromHex(petID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de pet_id inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_PET_ID_FORMAT")
-		return
-	}
-
-	vaccines, err := c.repo.FindByPetID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar vacinas", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-
-	if vaccines == nil {
-		vaccines = make([]*models.Vaccine, 0)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(vaccines)
 }
 
 // Update godoc
@@ -285,10 +186,32 @@ func (c *VaccineController) GetByPetID(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /vaccines/{id} [put]
 func (c *VaccineController) Update(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
 	id := chi.URLParam(r, "id")
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de vacina inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+		return
+	}
+
+	existing, err := c.repo.FindByID(r.Context(), objectID)
+	if err != nil {
+		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar vacina", err.Error(), "DB_QUERY_ERROR")
+		return
+	}
+
+	if existing == nil {
+		writeErrorWithDetails(w, http.StatusNotFound, "Vacina não encontrada", "Nenhuma vacina com este ID existe no banco de dados", "VACCINE_NOT_FOUND")
+		return
+	}
+
+	if err := validateResourceOwnership(existing.VetID, userID); err != nil {
+		writeErrorWithDetails(w, http.StatusForbidden, "Acesso negado", err.Error(), "ACCESS_DENIED")
 		return
 	}
 
@@ -304,6 +227,8 @@ func (c *VaccineController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	vaccine.ID = objectID
+	// Preserve vet ownership so an update never blanks or reassigns vet_id.
+	vaccine.VetID = userID
 
 	if err := c.repo.Update(r.Context(), objectID, &vaccine); err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -331,10 +256,32 @@ func (c *VaccineController) Update(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /vaccines/{id} [delete]
 func (c *VaccineController) Delete(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
 	id := chi.URLParam(r, "id")
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de vacina inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+		return
+	}
+
+	existing, err := c.repo.FindByID(r.Context(), objectID)
+	if err != nil {
+		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar vacina", err.Error(), "DB_QUERY_ERROR")
+		return
+	}
+
+	if existing == nil {
+		writeErrorWithDetails(w, http.StatusNotFound, "Vacina não encontrada", "Nenhuma vacina com este ID existe no banco de dados", "VACCINE_NOT_FOUND")
+		return
+	}
+
+	if err := validateResourceOwnership(existing.VetID, userID); err != nil {
+		writeErrorWithDetails(w, http.StatusForbidden, "Acesso negado", err.Error(), "ACCESS_DENIED")
 		return
 	}
 
@@ -350,13 +297,13 @@ func (c *VaccineController) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// validateVaccine validates required fields
+// validateVaccine validates required fields: the pet and a non-empty vaccine name.
 func validateVaccine(vaccine *models.Vaccine) error {
 	if vaccine.PetID.IsZero() {
-		return errValidation("pet_id is required")
+		return errValidationWithDetails("pet_id", "pet é obrigatório")
 	}
-	if vaccine.VaccineName == "" {
-		return errValidation("vaccine_name is required")
+	if strings.TrimSpace(vaccine.VaccineName) == "" {
+		return errValidationWithDetails("vaccine_name", "nome da vacina é obrigatório")
 	}
 	return nil
 }

@@ -41,6 +41,26 @@ func (r *mongoPetRepository) FindByID(ctx context.Context, id primitive.ObjectID
 	return pet, nil
 }
 
+// FindByIDs retrieves all pets whose id is in the given list, in a single
+// round-trip ($in). Returns an empty slice when ids is empty (no query sent).
+func (r *mongoPetRepository) FindByIDs(ctx context.Context, ids []primitive.ObjectID) ([]*models.Pet, error) {
+	if len(ids) == 0 {
+		return []*models.Pet{}, nil
+	}
+
+	cursor, err := r.collection.Find(ctx, bson.M{"_id": bson.M{"$in": ids}})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var pets []*models.Pet
+	if err = cursor.All(ctx, &pets); err != nil {
+		return nil, err
+	}
+	return pets, nil
+}
+
 // FindAll retrieves all pets
 func (r *mongoPetRepository) FindAll(ctx context.Context) ([]*models.Pet, error) {
 	cursor, err := r.collection.Find(ctx, bson.M{})

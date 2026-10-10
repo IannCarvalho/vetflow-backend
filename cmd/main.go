@@ -19,30 +19,40 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/vetflow/veterinary-api/config"
 	"github.com/vetflow/veterinary-api/db"
+	"github.com/vetflow/veterinary-api/helpers"
+	"github.com/vetflow/veterinary-api/repositories"
 	"github.com/vetflow/veterinary-api/routes"
+	"github.com/vetflow/veterinary-api/services"
 )
 
 func main() {
 	// Direct stdout output - should always appear
 	fmt.Println("========== VETFLOW APPLICATION STARTING ==========")
 
-	// Create a health check endpoint that works before everything else
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"status":"ok","service":"vetflow"}`)
-	})
+	// Root context cancelled on SIGINT/SIGTERM so shutdown can propagate.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	// Load configuration
 	log.Println("[MAIN] Starting application...")
 	cfg := config.LoadConfig()
 	log.Printf("[MAIN] Configuration loaded: %v\n", cfg)
+
+	// Fail fast on invalid/unsafe configuration (e.g. missing JWT_SECRET in prod).
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("[MAIN] FATAL: Invalid configuration: %v", err)
+	}
 
 	// Connect to MongoDB
 	log.Println("[MAIN] Attempting MongoDB connection...")
@@ -64,15 +74,75 @@ func main() {
 	}
 	log.Println("[MAIN] Database seed completed")
 
+	// Ensure non-unique indexes for vet-scoped and lookup queries. Index
+	// creation must never block boot, so failures are only logged.
+	idxCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := db.CreateIndexes(idxCtx, database); err != nil {
+		log.Printf("[MAIN] WARNING: index creation issue: %v", err)
+	}
+
 	// Create router
 	log.Println("[MAIN] Creating router...")
 	router := routes.NewRouter(database)
 	log.Println("[MAIN] Router created successfully")
 
+	// Start the daily e-mail notification scheduler (non-blocking).
+	if cfg.EmailNotificationsEnabled {
+		log.Println("[MAIN] Starting notification scheduler...")
+		notificationRepo := repositories.NewNotificationRepository(database)
+		consultationRepo := repositories.NewConsultationRepository(database.Collection("consultations"))
+		vaccineRepo := repositories.NewVaccineRepository(database.Collection("vaccines"))
+		petRepo := repositories.NewPetRepository(database.Collection("pets"))
+		userRepo := repositories.NewUserRepository(database.Collection("users"))
+
+		notificationService := services.NewNotificationService(notificationRepo, consultationRepo, vaccineRepo, petRepo)
+		mailer := helpers.NewMailer(helpers.EmailConfig{
+			Host:     cfg.SMTPHost,
+			Port:     cfg.SMTPPort,
+			User:     cfg.SMTPUser,
+			Pass:     cfg.SMTPPass,
+			From:     cfg.SMTPFrom,
+			FromName: cfg.FromName,
+		})
+
+		scheduler := services.NewNotificationScheduler(
+			notificationService, notificationRepo, userRepo, mailer, 24*time.Hour,
+		)
+		scheduler.Start(ctx)
+	} else {
+		log.Println("[MAIN] Email notifications disabled (EMAIL_NOTIFICATIONS_ENABLED=false)")
+	}
+
 	// Start server
 	addr := ":" + cfg.Port
-	log.Printf("[MAIN] Starting server on %s\n", addr)
-	if err := http.ListenAndServe(addr, router); err != nil {
-		log.Fatalf("[MAIN] FATAL: Server error: %v", err)
+	// Timeouts bound how long the server waits on slow clients, mitigating
+	// slowloris / slow-client attacks that hold connections open indefinitely.
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("[MAIN] FATAL: Server error: %v", err)
+		}
+	}()
+	log.Printf("[MAIN] Server listening on %s\n", addr)
+
+	// Block until a shutdown signal cancels the root context.
+	<-ctx.Done()
+	log.Println("[MAIN] Shutdown signal received, shutting down server...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("[MAIN] Server shutdown error: %v\n", err)
+	} else {
+		log.Println("[MAIN] Server shut down gracefully")
 	}
 }

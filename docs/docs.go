@@ -24,9 +24,1155 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/appointments": {
+            "get": {
+                "description": "List appointments, optionally filtered by pet_id or by a date range (start/end RFC3339)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "List appointments for the authenticated veterinarian",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Pet ID to filter appointments",
+                        "name": "pet_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Range start (RFC3339)",
+                        "name": "start",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Range end (RFC3339)",
+                        "name": "end",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Appointment"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Schedule a new appointment in the agenda for the authenticated veterinarian",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "Create a new appointment",
+                "parameters": [
+                    {
+                        "description": "Appointment object",
+                        "name": "appointment",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Appointment"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Appointment"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/appointments/{id}": {
+            "get": {
+                "description": "Get a specific appointment by ID (must belong to the authenticated vet)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "Get appointment by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Appointment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Appointment"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Appointment not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update an existing appointment (must belong to the authenticated vet)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "Update an appointment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Appointment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated appointment object",
+                        "name": "appointment",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Appointment"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Appointment"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Appointment not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete an appointment by ID (must belong to the authenticated vet)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "Delete an appointment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Appointment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Appointment not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/attachments": {
+            "get": {
+                "description": "List attachment metadata for a pet, without the base64 content",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attachments"
+                ],
+                "summary": "List attachments (summaries) for a pet",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Pet ID",
+                        "name": "pet_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.AttachmentSummary"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Attach an exam/image/report to a pet's medical record",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attachments"
+                ],
+                "summary": "Upload a new attachment",
+                "parameters": [
+                    {
+                        "description": "Attachment object",
+                        "name": "attachment",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Attachment"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Attachment"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/attachments/{id}": {
+            "put": {
+                "description": "Update name/category/notes of an attachment (content is not changed here)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attachments"
+                ],
+                "summary": "Update attachment metadata",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Attachment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated metadata",
+                        "name": "attachment",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Attachment"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Attachment not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete an attachment by ID (must belong to the authenticated vet)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attachments"
+                ],
+                "summary": "Delete an attachment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Attachment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Attachment not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/attachments/{id}/content": {
+            "get": {
+                "description": "Get a specific attachment including its base64 content (for download/preview)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attachments"
+                ],
+                "summary": "Get an attachment's full content",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Attachment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Attachment"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Attachment not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "description": "Authenticate user with email and password",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login user",
+                "parameters": [
+                    {
+                        "description": "Login Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.AuthResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/oauth/callback": {
+            "post": {
+                "description": "Handle OAuth callback from providers - delegates to social login endpoint",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "OAuth Callback Handler",
+                "parameters": [
+                    {
+                        "description": "OAuth callback request (provider + userData)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.SocialLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.AuthResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register": {
+            "post": {
+                "description": "Create a new user account",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Register a new user",
+                "parameters": [
+                    {
+                        "description": "Register Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.AuthResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/social-login": {
+            "post": {
+                "description": "Authenticate user with Google, Facebook, or Discord",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login with social provider",
+                "parameters": [
+                    {
+                        "description": "Social Login Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.SocialLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.AuthResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/verify/{token}": {
+            "get": {
+                "description": "Verify if the provided token is valid",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Verify user token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User Token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.User"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/catalog": {
+            "get": {
+                "description": "List services and products, optionally filtered by type",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "summary": "List catalog items for the authenticated veterinarian",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by type: service or product",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.CatalogItem"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a service or product in the clinic catalog",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "summary": "Create a new catalog item",
+                "parameters": [
+                    {
+                        "description": "Catalog item object",
+                        "name": "item",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CatalogItem"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.CatalogItem"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/catalog/{id}": {
+            "get": {
+                "description": "Get a specific catalog item by ID (must belong to the authenticated vet)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "summary": "Get catalog item by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Catalog item ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.CatalogItem"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Item not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update an existing catalog item (must belong to the authenticated vet)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "summary": "Update a catalog item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Catalog item ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated catalog item object",
+                        "name": "item",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CatalogItem"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.CatalogItem"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Item not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a catalog item by ID (must belong to the authenticated vet)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "summary": "Delete a catalog item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Catalog item ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Item not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/clients": {
             "get": {
-                "description": "Retrieve all registered clients",
+                "description": "Retrieve all registered clients for the authenticated veterinarian",
                 "consumes": [
                     "application/json"
                 ],
@@ -213,6 +1359,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "403": {
+                        "description": "Access denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Client not found",
                         "schema": {
@@ -234,7 +1389,7 @@ const docTemplate = `{
                 }
             },
             "delete": {
-                "description": "Delete a client by ID",
+                "description": "Delete a client by ID (cascades to delete all associated pets, consultations, and vaccines)",
                 "consumes": [
                     "application/json"
                 ],
@@ -267,6 +1422,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "403": {
+                        "description": "Access denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Client not found",
                         "schema": {
@@ -289,6 +1453,56 @@ const docTemplate = `{
             }
         },
         "/consultations": {
+            "get": {
+                "description": "Get consultations for the authenticated veterinarian, optionally filtered by pet",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Consultations"
+                ],
+                "summary": "Get all consultations for the authenticated veterinarian",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Pet ID to filter consultations",
+                        "name": "pet_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Consultation"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
             "post": {
                 "description": "Create a new veterinary consultation record",
                 "consumes": [
@@ -519,9 +1733,429 @@ const docTemplate = `{
                 }
             }
         },
+        "/consultations/{id}/prescription-draft": {
+            "get": {
+                "description": "Returns an unsaved prescription (receituário) pre-filled from the consultation: pet_id, consultation_id, today's date and general notes seeded from the main complaint and any medications noted in the summary. The client edits it and persists it with POST /prescriptions. Must belong to the authenticated vet.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Consultations"
+                ],
+                "summary": "Build a prescription draft from a consultation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Consultation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Prescription"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Consultation not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/stats": {
+            "get": {
+                "description": "Aggregated, vet-scoped counts for the dashboard home screen",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get dashboard stats for the authenticated veterinarian",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/invoices": {
+            "get": {
+                "description": "List invoices, optionally filtered by client_id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "List invoices for the authenticated veterinarian",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Client ID to filter invoices",
+                        "name": "client_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Invoice"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create an invoice (financeiro) for a client",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Create a new invoice",
+                "parameters": [
+                    {
+                        "description": "Invoice object",
+                        "name": "invoice",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Invoice"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Invoice"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/invoices/{id}": {
+            "get": {
+                "description": "Get a specific invoice by ID (must belong to the authenticated vet)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Get invoice by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invoice ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Invoice"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Invoice not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update an existing invoice (must belong to the authenticated vet)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Update an invoice",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invoice ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated invoice object",
+                        "name": "invoice",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Invoice"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Invoice"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Invoice not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete an invoice by ID (must belong to the authenticated vet)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Delete an invoice",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invoice ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Invoice not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/pets": {
             "get": {
-                "description": "Retrieve all pets, optionally filtered by owner",
+                "description": "Retrieve all pets for the authenticated veterinarian",
                 "consumes": [
                     "application/json"
                 ],
@@ -532,14 +2166,6 @@ const docTemplate = `{
                     "Pets"
                 ],
                 "summary": "List all pets",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Filter by owner ID",
-                        "name": "owner_id",
-                        "in": "query"
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -562,7 +2188,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Create a new pet record",
+                "description": "Create a new pet record for an existing client",
                 "consumes": [
                     "application/json"
                 ],
@@ -575,7 +2201,7 @@ const docTemplate = `{
                 "summary": "Create a new pet",
                 "parameters": [
                     {
-                        "description": "Pet object",
+                        "description": "Pet object with owner_id",
                         "name": "pet",
                         "in": "body",
                         "required": true,
@@ -593,6 +2219,15 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Access denied",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -643,6 +2278,15 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Access denied",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -716,6 +2360,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "403": {
+                        "description": "Access denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Pet not found",
                         "schema": {
@@ -770,6 +2423,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "403": {
+                        "description": "Access denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Pet not found",
                         "schema": {
@@ -791,9 +2453,636 @@ const docTemplate = `{
                 }
             }
         },
+        "/prescriptions": {
+            "get": {
+                "description": "List prescriptions, optionally filtered by pet_id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Prescriptions"
+                ],
+                "summary": "List prescriptions for the authenticated veterinarian",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Pet ID to filter prescriptions",
+                        "name": "pet_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Prescription"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a prescription (receituário) for a pet",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Prescriptions"
+                ],
+                "summary": "Create a new prescription",
+                "parameters": [
+                    {
+                        "description": "Prescription object",
+                        "name": "prescription",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Prescription"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Prescription"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/prescriptions/{id}": {
+            "get": {
+                "description": "Get a specific prescription by ID (must belong to the authenticated vet)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Prescriptions"
+                ],
+                "summary": "Get prescription by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Prescription ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Prescription"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Prescription not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update an existing prescription (must belong to the authenticated vet)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Prescriptions"
+                ],
+                "summary": "Update a prescription",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Prescription ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated prescription object",
+                        "name": "prescription",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Prescription"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Prescription"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Prescription not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a prescription by ID (must belong to the authenticated vet)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Prescriptions"
+                ],
+                "summary": "Delete a prescription",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Prescription ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Prescription not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/prescriptions/{id}/print": {
+            "get": {
+                "description": "Returns the prescription (receituário) as a print-ready HTML document with the pet, tutor and veterinarian header resolved. Pass ?format=json to receive the aggregated payload instead of HTML. Must belong to the authenticated vet.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/html",
+                    "application/json"
+                ],
+                "tags": [
+                    "Prescriptions"
+                ],
+                "summary": "Render a printable prescription",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Prescription ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Response format: html (default) or json",
+                        "name": "format",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.PrintablePrescription"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Prescription not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/password": {
+            "put": {
+                "description": "Change user password - works for both regular users and social login users without password",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Change Password",
+                "parameters": [
+                    {
+                        "description": "Change password request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.ChangePasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/password/set": {
+            "put": {
+                "description": "Set password for users without one - for social login users who want to enable email/password login",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Set Password",
+                "parameters": [
+                    {
+                        "description": "Set password request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.SetPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/profile": {
+            "put": {
+                "description": "Update user name and email",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Update User Profile",
+                "parameters": [
+                    {
+                        "description": "Profile update request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.UpdateProfileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/profile-picture": {
+            "put": {
+                "description": "Update user profile picture (base64 encoded)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Update Profile Picture",
+                "parameters": [
+                    {
+                        "description": "Profile picture update request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.UpdateProfilePictureRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Remove user profile picture",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Remove Profile Picture",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/vaccines": {
             "get": {
-                "description": "Get all vaccines for a specific pet",
+                "description": "Get vaccines for the authenticated veterinarian, optionally filtered by pet",
                 "consumes": [
                     "application/json"
                 ],
@@ -803,14 +3092,13 @@ const docTemplate = `{
                 "tags": [
                     "Vaccines"
                 ],
-                "summary": "List vaccines by pet",
+                "summary": "Get all vaccines for the authenticated veterinarian",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Pet ID",
+                        "description": "Pet ID to filter vaccines",
                         "name": "pet_id",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -824,7 +3112,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid pet_id",
+                        "description": "Invalid input",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -1075,6 +3363,94 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "controllers.ChangePasswordRequest": {
+            "type": "object",
+            "properties": {
+                "current_password": {
+                    "type": "string"
+                },
+                "new_password": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.PrintablePrescription": {
+            "type": "object",
+            "properties": {
+                "consultation_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "general_notes": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.PrescriptionItem"
+                    }
+                },
+                "owner_name": {
+                    "type": "string"
+                },
+                "pet_breed": {
+                    "type": "string"
+                },
+                "pet_id": {
+                    "type": "string"
+                },
+                "pet_name": {
+                    "type": "string"
+                },
+                "pet_species": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "vet_id": {
+                    "type": "string"
+                },
+                "vet_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.SetPasswordRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.UpdateProfilePictureRequest": {
+            "type": "object",
+            "properties": {
+                "profile_picture": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.UpdateProfileRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "models.Address": {
             "type": "object",
             "properties": {
@@ -1121,6 +3497,297 @@ const docTemplate = `{
                 }
             }
         },
+        "models.Appointment": {
+            "type": "object",
+            "properties": {
+                "client_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "end_time": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "pet_id": {
+                    "type": "string"
+                },
+                "start_time": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.AppointmentStatus"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/models.AppointmentType"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "vet_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.AppointmentStatus": {
+            "type": "string",
+            "enum": [
+                "scheduled",
+                "confirmed",
+                "completed",
+                "cancelled",
+                "no_show"
+            ],
+            "x-enum-comments": {
+                "AppointmentCancelled": "Cancelado",
+                "AppointmentCompleted": "Concluído",
+                "AppointmentConfirmed": "Confirmado",
+                "AppointmentNoShow": "Não compareceu",
+                "AppointmentScheduled": "Agendado"
+            },
+            "x-enum-descriptions": [
+                "Agendado",
+                "Confirmado",
+                "Concluído",
+                "Cancelado",
+                "Não compareceu"
+            ],
+            "x-enum-varnames": [
+                "AppointmentScheduled",
+                "AppointmentConfirmed",
+                "AppointmentCompleted",
+                "AppointmentCancelled",
+                "AppointmentNoShow"
+            ]
+        },
+        "models.AppointmentType": {
+            "type": "string",
+            "enum": [
+                "consultation",
+                "vaccine",
+                "return",
+                "surgery",
+                "exam",
+                "grooming",
+                "other"
+            ],
+            "x-enum-comments": {
+                "AppointmentConsultation": "Consulta",
+                "AppointmentExam": "Exame",
+                "AppointmentGrooming": "Banho e tosa",
+                "AppointmentOther": "Outro",
+                "AppointmentReturn": "Retorno",
+                "AppointmentSurgery": "Cirurgia",
+                "AppointmentVaccine": "Vacinação"
+            },
+            "x-enum-descriptions": [
+                "Consulta",
+                "Vacinação",
+                "Retorno",
+                "Cirurgia",
+                "Exame",
+                "Banho e tosa",
+                "Outro"
+            ],
+            "x-enum-varnames": [
+                "AppointmentConsultation",
+                "AppointmentVaccine",
+                "AppointmentReturn",
+                "AppointmentSurgery",
+                "AppointmentExam",
+                "AppointmentGrooming",
+                "AppointmentOther"
+            ]
+        },
+        "models.Attachment": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "$ref": "#/definitions/models.AttachmentCategory"
+                },
+                "consultation_id": {
+                    "type": "string"
+                },
+                "content": {
+                    "description": "Content is the base64-encoded file payload (data URL body).",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "mime_type": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "pet_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "vet_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.AttachmentCategory": {
+            "type": "string",
+            "enum": [
+                "exam",
+                "image",
+                "report",
+                "document"
+            ],
+            "x-enum-comments": {
+                "AttachmentDocument": "Documento geral",
+                "AttachmentExam": "Resultado de exame",
+                "AttachmentImage": "Imagem (raio-x, ultrassom, foto)",
+                "AttachmentReport": "Laudo"
+            },
+            "x-enum-descriptions": [
+                "Resultado de exame",
+                "Imagem (raio-x, ultrassom, foto)",
+                "Laudo",
+                "Documento geral"
+            ],
+            "x-enum-varnames": [
+                "AttachmentExam",
+                "AttachmentImage",
+                "AttachmentReport",
+                "AttachmentDocument"
+            ]
+        },
+        "models.AttachmentSummary": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "$ref": "#/definitions/models.AttachmentCategory"
+                },
+                "consultation_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "mime_type": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "pet_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "vet_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.AuthResponse": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/models.User"
+                }
+            }
+        },
+        "models.CatalogItem": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "min_stock": {
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "stock_quantity": {
+                    "description": "Stock fields are only meaningful for products.",
+                    "type": "number"
+                },
+                "type": {
+                    "$ref": "#/definitions/models.CatalogItemType"
+                },
+                "unit": {
+                    "description": "ex: \"un\", \"ml\", \"cx\"",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "vet_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CatalogItemType": {
+            "type": "string",
+            "enum": [
+                "service",
+                "product"
+            ],
+            "x-enum-comments": {
+                "CatalogProduct": "Produto (vacina, medicamento...)",
+                "CatalogService": "Serviço (consulta, banho, cirurgia...)"
+            },
+            "x-enum-descriptions": [
+                "Serviço (consulta, banho, cirurgia...)",
+                "Produto (vacina, medicamento...)"
+            ],
+            "x-enum-varnames": [
+                "CatalogService",
+                "CatalogProduct"
+            ]
+        },
         "models.Client": {
             "type": "object",
             "properties": {
@@ -1143,6 +3810,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                },
+                "vet_id": {
                     "type": "string"
                 }
             }
@@ -1171,10 +3841,13 @@ const docTemplate = `{
                 "physiological": {
                     "$ref": "#/definitions/models.Physiological"
                 },
+                "return_date": {
+                    "type": "string"
+                },
                 "summary": {
                     "$ref": "#/definitions/models.Summary"
                 },
-                "vet_name": {
+                "vet_id": {
                     "type": "string"
                 }
             }
@@ -1195,6 +3868,159 @@ const docTemplate = `{
                     "type": "boolean"
                 }
             }
+        },
+        "models.Invoice": {
+            "type": "object",
+            "properties": {
+                "client_id": {
+                    "type": "string"
+                },
+                "consultation_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "discount": {
+                    "type": "number"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "issue_date": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.InvoiceItem"
+                    }
+                },
+                "method": {
+                    "$ref": "#/definitions/models.PaymentMethod"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "paid_at": {
+                    "type": "string"
+                },
+                "pet_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.PaymentStatus"
+                },
+                "subtotal": {
+                    "type": "number"
+                },
+                "total": {
+                    "type": "number"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "vet_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.InvoiceItem": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number"
+                },
+                "total": {
+                    "type": "number"
+                },
+                "unit_price": {
+                    "type": "number"
+                }
+            }
+        },
+        "models.LoginRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.PaymentMethod": {
+            "type": "string",
+            "enum": [
+                "cash",
+                "card",
+                "pix",
+                "transfer",
+                "boleto",
+                ""
+            ],
+            "x-enum-comments": {
+                "MethodBoleto": "Boleto",
+                "MethodCard": "Cartão",
+                "MethodCash": "Dinheiro",
+                "MethodPix": "Pix",
+                "MethodTransfer": "Transferência",
+                "MethodUnassigned": "Não informado"
+            },
+            "x-enum-descriptions": [
+                "Dinheiro",
+                "Cartão",
+                "Pix",
+                "Transferência",
+                "Boleto",
+                "Não informado"
+            ],
+            "x-enum-varnames": [
+                "MethodCash",
+                "MethodCard",
+                "MethodPix",
+                "MethodTransfer",
+                "MethodBoleto",
+                "MethodUnassigned"
+            ]
+        },
+        "models.PaymentStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "paid",
+                "partial",
+                "overdue",
+                "canceled"
+            ],
+            "x-enum-comments": {
+                "PaymentCanceled": "Cancelado",
+                "PaymentOverdue": "Vencido",
+                "PaymentPaid": "Pago",
+                "PaymentPartial": "Parcial",
+                "PaymentPending": "Pendente"
+            },
+            "x-enum-descriptions": [
+                "Pendente",
+                "Pago",
+                "Parcial",
+                "Vencido",
+                "Cancelado"
+            ],
+            "x-enum-varnames": [
+                "PaymentPending",
+                "PaymentPaid",
+                "PaymentPartial",
+                "PaymentOverdue",
+                "PaymentCanceled"
+            ]
         },
         "models.Pet": {
             "type": "object",
@@ -1251,6 +4077,102 @@ const docTemplate = `{
                 }
             }
         },
+        "models.Prescription": {
+            "type": "object",
+            "properties": {
+                "consultation_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "general_notes": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.PrescriptionItem"
+                    }
+                },
+                "pet_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "vet_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.PrescriptionItem": {
+            "type": "object",
+            "properties": {
+                "dosage": {
+                    "description": "Dose (ex: \"10mg\")",
+                    "type": "string"
+                },
+                "duration": {
+                    "description": "Duração (ex: \"7 dias\")",
+                    "type": "string"
+                },
+                "frequency": {
+                    "description": "Frequência (ex: \"2x ao dia\")",
+                    "type": "string"
+                },
+                "instructions": {
+                    "description": "Instruções adicionais",
+                    "type": "string"
+                },
+                "medication": {
+                    "description": "Nome do medicamento",
+                    "type": "string"
+                },
+                "route": {
+                    "description": "Via de administração (oral, tópica...)",
+                    "type": "string"
+                }
+            }
+        },
+        "models.RegisterRequest": {
+            "type": "object",
+            "properties": {
+                "confirm_password": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.SocialLoginRequest": {
+            "type": "object",
+            "properties": {
+                "provider": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                },
+                "userData": {
+                    "type": "object",
+                    "additionalProperties": true
+                }
+            }
+        },
         "models.Summary": {
             "type": "object",
             "properties": {
@@ -1263,16 +4185,34 @@ const docTemplate = `{
                 "feces_urine": {
                     "type": "string"
                 },
-                "feeding": {
-                    "type": "string"
-                },
-                "main_complaint": {
-                    "type": "string"
-                },
                 "medications": {
                     "type": "string"
                 },
                 "vaccines_and_deworming": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.User": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "profile_picture": {
+                    "description": "Base64 encoded image",
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 }
             }
@@ -1307,7 +4247,7 @@ const docTemplate = `{
                 "vaccine_name": {
                     "type": "string"
                 },
-                "vet_name": {
+                "vet_id": {
                     "type": "string"
                 }
             }
@@ -1322,9 +4262,9 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8080",
+	Host:             "",
 	BasePath:         "/",
-	Schemes:          []string{"http"},
+	Schemes:          []string{"http", "https"},
 	Title:            "VetFlow - Veterinary Management API",
 	Description:      "Complete REST API for managing veterinary clinics, clients, pets, consultations and vaccines.",
 	InfoInstanceName: "swagger",

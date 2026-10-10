@@ -42,3 +42,6 @@ Thumbs.db
 bin/
 dist/
 .vercel
+
+# Workflow/agent task metadata (not source)
+.agents/

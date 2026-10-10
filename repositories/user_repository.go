@@ -12,12 +12,18 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// ErrEmailAlreadyRegistered is returned by UserRepository.Create when a user
+// with the same email already exists. It is a package-level sentinel so callers
+// can match it with errors.Is.
+var ErrEmailAlreadyRegistered = errors.New("email already registered")
+
 // UserRepository defines the interface for user data access
 type UserRepository interface {
 	Create(ctx context.Context, user *models.User) error
 	FindByEmail(ctx context.Context, email string) (*models.User, error)
 	FindByID(ctx context.Context, id string) (*models.User, error)
 	FindByObjectID(ctx context.Context, id primitive.ObjectID) (*models.User, error)
+	FindAll(ctx context.Context) ([]*models.User, error)
 	UpdateUser(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) (*models.User, error)
 }
 
@@ -36,7 +42,7 @@ func (r *UserRepositoryImpl) Create(ctx context.Context, user *models.User) erro
 	// Check if email already exists
 	existingUser, err := r.FindByEmail(ctx, user.Email)
 	if err == nil && existingUser != nil {
-		return errors.New("email already registered")
+		return ErrEmailAlreadyRegistered
 	}
 
 	user.ID = primitive.NewObjectID()
@@ -46,7 +52,7 @@ func (r *UserRepositoryImpl) Create(ctx context.Context, user *models.User) erro
 	result, err := r.collection.InsertOne(ctx, user)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
-			return errors.New("email already registered")
+			return ErrEmailAlreadyRegistered
 		}
 		return err
 	}
@@ -84,6 +90,21 @@ func (r *UserRepositoryImpl) FindByID(ctx context.Context, id string) (*models.U
 		return nil, err
 	}
 	return &user, nil
+}
+
+// FindAll returns all users (vets). Used by the notification scheduler.
+func (r *UserRepositoryImpl) FindAll(ctx context.Context) ([]*models.User, error) {
+	cursor, err := r.collection.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var users []*models.User
+	if err = cursor.All(ctx, &users); err != nil {
+		return nil, err
+	}
+	return users, nil
 }
 
 // FindByObjectID finds a user by ObjectID

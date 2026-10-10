@@ -1,10 +1,16 @@
 package routes
 
 import (
+	"context"
 	"net/http"
+	"os"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"github.com/vetflow/veterinary-api/controllers"
 	_ "github.com/vetflow/veterinary-api/docs"
@@ -17,22 +23,25 @@ import (
 func NewRouter(db *mongo.Database) *chi.Mux {
 	r := chi.NewRouter()
 
-	// CORS Middleware
-	r.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-ID")
-			w.Header().Set("Access-Control-Max-Age", "3600")
+	// Parse the CORS allowlist once. CORS_ALLOWED_ORIGINS is a comma-separated
+	// list of origins; when empty we fall back to "*" (dev behavior unchanged).
+	var allowed []string
+	for _, o := range strings.Split(os.Getenv("CORS_ALLOWED_ORIGINS"), ",") {
+		if o = strings.TrimSpace(o); o != "" {
+			allowed = append(allowed, o)
+		}
+	}
 
-			if r.Method == http.MethodOptions {
-				w.WriteHeader(http.StatusOK)
-				return
-			}
-
-			next.ServeHTTP(w, r)
-		})
-	})
+	// CORS Middleware. An empty allowlist leaves AllowedOrigins empty, which
+	// go-chi/cors treats as match-all ("*") — the unchanged dev default. When
+	// the allowlist is populated, only those exact origins are echoed back and
+	// non-matching origins are denied (no fall-through to the first entry).
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins: allowed,
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Content-Type", "Authorization", "X-User-ID"},
+		MaxAge:         3600,
+	}))
 
 	// Middleware
 	r.Use(middleware.Logger)
@@ -44,14 +53,19 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 	consultationRepo := repositories.NewConsultationRepository(db.Collection("consultations"))
 	vaccineRepo := repositories.NewVaccineRepository(db.Collection("vaccines"))
 	userRepo := repositories.NewUserRepository(db.Collection("users"))
+	prescriptionRepo := repositories.NewPrescriptionRepository(db.Collection("prescriptions"))
+	catalogRepo := repositories.NewCatalogItemRepository(db.Collection("catalog_items"))
+	invoiceRepo := repositories.NewInvoiceRepository(db.Collection("invoices"))
+	appointmentRepo := repositories.NewAppointmentRepository(db.Collection("appointments"))
+	attachmentRepo := repositories.NewAttachmentRepository(db.Collection("attachments"))
 	notificationRepo := repositories.NewNotificationRepository(db)
 
 	// Initialize services
 	notificationService := services.NewNotificationService(notificationRepo, consultationRepo, vaccineRepo, petRepo)
 
 	// Initialize controllers
-	clientController := controllers.NewClientController(clientRepo, petRepo, consultationRepo, vaccineRepo)
-	petController := controllers.NewPetController(petRepo, clientRepo, consultationRepo, vaccineRepo)
+	clientController := controllers.NewClientController(clientRepo, petRepo, consultationRepo, vaccineRepo, prescriptionRepo, invoiceRepo, appointmentRepo, attachmentRepo)
+	petController := controllers.NewPetController(petRepo, clientRepo, consultationRepo, vaccineRepo, prescriptionRepo, appointmentRepo, attachmentRepo)
 	consultationController := controllers.NewConsultationController(consultationRepo)
 	vaccineController := controllers.NewVaccineController(vaccineRepo)
 	authController := controllers.NewAuthController(userRepo)
@@ -59,20 +73,46 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 	socialAuthController := controllers.NewSocialAuthController(userRepo)
 	oauthCallbackController := controllers.NewOAuthCallbackController(userRepo)
 	notificationController := controllers.NewNotificationController(notificationService)
+	prescriptionController := controllers.NewPrescriptionController(prescriptionRepo).
+		WithPrintContext(petRepo, clientRepo, userRepo)
+	catalogController := controllers.NewCatalogItemController(catalogRepo)
+	invoiceController := controllers.NewInvoiceController(invoiceRepo)
+	appointmentController := controllers.NewAppointmentController(appointmentRepo)
+	attachmentController := controllers.NewAttachmentController(attachmentRepo, petRepo, clientRepo)
+	dashboardController := controllers.NewDashboardController(clientRepo, petRepo, consultationRepo, vaccineRepo, invoiceRepo, appointmentRepo)
 
-	// Health check
+	// Health check (readiness): pings MongoDB with a short timeout so the
+	// endpoint reflects real DB availability. Unauthenticated by design.
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		if err := db.Client().Ping(ctx, nil); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte(`{"status":"degraded","db":"down"}`))
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
+	// Rate limiter for the credential endpoints. AUTH_RATE_LIMIT_PER_MIN sets the
+	// per-IP limit (default 10; <=0 disables limiting).
+	authRateLimit := 10
+	if v, err := strconv.Atoi(os.Getenv("AUTH_RATE_LIMIT_PER_MIN")); err == nil {
+		authRateLimit = v
+	}
+	authLimiter := NewRateLimiter(authRateLimit)
+
 	// Auth routes
 	r.Route("/auth", func(r chi.Router) {
-		r.Post("/register", authController.Register)
-		r.Post("/login", authController.Login)
-		r.Post("/social-login", socialAuthController.SocialLogin)
-		r.Post("/oauth/callback", oauthCallbackController.OAuthCallback)
+		// Rate-limit the credential and identity endpoints to blunt
+		// brute-force and token-replay abuse; only the email-verify link is left
+		// unthrottled.
+		r.With(authLimiter).Post("/register", authController.Register)
+		r.With(authLimiter).Post("/login", authController.Login)
+		r.With(authLimiter).Post("/social-login", socialAuthController.SocialLogin)
+		r.With(authLimiter).Post("/oauth/callback", oauthCallbackController.OAuthCallback)
 		r.Get("/verify/{token}", authController.Verify)
 	})
 
@@ -96,52 +136,102 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 		httpSwagger.URL("/swagger/doc.json"),
 	))
 
-	// Client routes (GET public, write protected)
+	// Client routes (fully protected and scoped to the authenticated vet)
 	r.Route("/clients", func(r chi.Router) {
-		// GET endpoints are public (read-only) - use Public versions
-		r.Get("/", clientController.GetAllPublic)
-		r.Get("/{id}", clientController.GetByIDPublic)
-
-		// POST/PUT/DELETE endpoints are protected
-		r.With(AuthMiddleware).Post("/", clientController.Create)
-		r.With(AuthMiddleware).Put("/{id}", clientController.Update)
-		r.With(AuthMiddleware).Delete("/{id}", clientController.Delete)
+		r.Use(AuthMiddleware)
+		r.Get("/", clientController.GetAll)
+		r.Get("/{id}", clientController.GetByID)
+		r.Post("/", clientController.Create)
+		r.Put("/{id}", clientController.Update)
+		r.Delete("/{id}", clientController.Delete)
 	})
 
-	// Pet routes (GET public, write protected)
+	// Pet routes (fully protected and scoped to the authenticated vet)
 	r.Route("/pets", func(r chi.Router) {
-		// GET endpoints are public (read-only) - use Public versions
-		r.Get("/", petController.GetAllPublic)
-		r.Get("/{id}", petController.GetByIDPublic)
-
-		// POST/PUT/DELETE endpoints are protected
-		r.With(AuthMiddleware).Post("/", petController.Create)
-		r.With(AuthMiddleware).Put("/{id}", petController.Update)
-		r.With(AuthMiddleware).Delete("/{id}", petController.Delete)
+		r.Use(AuthMiddleware)
+		r.Get("/", petController.GetAll)
+		r.Get("/{id}", petController.GetByID)
+		r.Post("/", petController.Create)
+		r.Put("/{id}", petController.Update)
+		r.Delete("/{id}", petController.Delete)
 	})
 
-	// Consultation routes (GET public, write protected)
+	// Consultation routes (fully protected and scoped to the authenticated vet)
 	r.Route("/consultations", func(r chi.Router) {
-		// GET endpoints are public (read-only)
-		r.Get("/", consultationController.GetAllPublic)
+		r.Use(AuthMiddleware)
+		r.Get("/", consultationController.GetAll)
 		r.Get("/{id}", consultationController.GetByID)
-
-		// POST/PUT/DELETE endpoints are protected
-		r.With(AuthMiddleware).Post("/", consultationController.Create)
-		r.With(AuthMiddleware).Put("/{id}", consultationController.Update)
-		r.With(AuthMiddleware).Delete("/{id}", consultationController.Delete)
+		r.Get("/{id}/prescription-draft", consultationController.PrescriptionDraft)
+		r.Post("/", consultationController.Create)
+		r.Put("/{id}", consultationController.Update)
+		r.Delete("/{id}", consultationController.Delete)
 	})
 
-	// Vaccine routes (GET public, write protected)
+	// Vaccine routes (fully protected and scoped to the authenticated vet)
 	r.Route("/vaccines", func(r chi.Router) {
-		// GET endpoints are public (read-only) - use Public versions
-		r.Get("/", vaccineController.GetAllPublic)
-		r.Get("/{id}", vaccineController.GetByIDPublic)
+		r.Use(AuthMiddleware)
+		r.Get("/", vaccineController.GetAll)
+		r.Get("/{id}", vaccineController.GetByID)
+		r.Post("/", vaccineController.Create)
+		r.Put("/{id}", vaccineController.Update)
+		r.Delete("/{id}", vaccineController.Delete)
+	})
 
-		// POST/PUT/DELETE endpoints are protected
-		r.With(AuthMiddleware).Post("/", vaccineController.Create)
-		r.With(AuthMiddleware).Put("/{id}", vaccineController.Update)
-		r.With(AuthMiddleware).Delete("/{id}", vaccineController.Delete)
+	// Prescription routes (fully protected - receituário is private to the vet)
+	r.Route("/prescriptions", func(r chi.Router) {
+		r.Use(AuthMiddleware)
+		r.Get("/", prescriptionController.GetAll)
+		r.Post("/", prescriptionController.Create)
+		r.Get("/{id}", prescriptionController.GetByID)
+		r.Get("/{id}/print", prescriptionController.Print)
+		r.Put("/{id}", prescriptionController.Update)
+		r.Delete("/{id}", prescriptionController.Delete)
+	})
+
+	// Catalog routes (fully protected - o catálogo é privado do vet)
+	r.Route("/catalog", func(r chi.Router) {
+		r.Use(AuthMiddleware)
+		r.Get("/", catalogController.GetAll)
+		r.Post("/", catalogController.Create)
+		r.Get("/{id}", catalogController.GetByID)
+		r.Put("/{id}", catalogController.Update)
+		r.Delete("/{id}", catalogController.Delete)
+	})
+
+	// Invoice routes (fully protected - o financeiro é privado do vet)
+	r.Route("/invoices", func(r chi.Router) {
+		r.Use(AuthMiddleware)
+		r.Get("/", invoiceController.GetAll)
+		r.Post("/", invoiceController.Create)
+		r.Get("/{id}", invoiceController.GetByID)
+		r.Put("/{id}", invoiceController.Update)
+		r.Delete("/{id}", invoiceController.Delete)
+	})
+
+	// Appointment routes (fully protected - the agenda is private to the vet)
+	r.Route("/appointments", func(r chi.Router) {
+		r.Use(AuthMiddleware)
+		r.Get("/", appointmentController.GetAll)
+		r.Post("/", appointmentController.Create)
+		r.Get("/{id}", appointmentController.GetByID)
+		r.Put("/{id}", appointmentController.Update)
+		r.Delete("/{id}", appointmentController.Delete)
+	})
+
+	// Attachment routes (fully protected - anexos são privados do vet)
+	r.Route("/attachments", func(r chi.Router) {
+		r.Use(AuthMiddleware)
+		r.Get("/", attachmentController.GetAll)
+		r.Post("/", attachmentController.Create)
+		r.Get("/{id}/content", attachmentController.GetContent)
+		r.Put("/{id}", attachmentController.Update)
+		r.Delete("/{id}", attachmentController.Delete)
+	})
+
+	// Dashboard routes (protected and scoped to the authenticated vet)
+	r.Route("/dashboard", func(r chi.Router) {
+		r.Use(AuthMiddleware)
+		r.Get("/stats", dashboardController.Stats)
 	})
 
 	// Notification routes (protected)

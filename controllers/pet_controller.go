@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -17,6 +18,9 @@ type PetController struct {
 	clientRepo       repositories.ClientRepository
 	consultationRepo repositories.ConsultationRepository
 	vaccineRepo      repositories.VaccineRepository
+	prescriptionRepo repositories.PrescriptionRepository
+	appointmentRepo  repositories.AppointmentRepository
+	attachmentRepo   repositories.AttachmentRepository
 }
 
 // NewPetController creates a new pet controller with dependency injection
@@ -25,12 +29,18 @@ func NewPetController(
 	clientRepo repositories.ClientRepository,
 	consultationRepo repositories.ConsultationRepository,
 	vaccineRepo repositories.VaccineRepository,
+	prescriptionRepo repositories.PrescriptionRepository,
+	appointmentRepo repositories.AppointmentRepository,
+	attachmentRepo repositories.AttachmentRepository,
 ) *PetController {
 	return &PetController{
 		repo:             repo,
 		clientRepo:       clientRepo,
 		consultationRepo: consultationRepo,
 		vaccineRepo:      vaccineRepo,
+		prescriptionRepo: prescriptionRepo,
+		appointmentRepo:  appointmentRepo,
+		attachmentRepo:   attachmentRepo,
 	}
 }
 
@@ -169,38 +179,26 @@ func (c *PetController) GetAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var pets []*models.Pet
-
-	pets, err = c.repo.FindByVetID(r.Context(), userID)
-
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "Failed to retrieve pets")
-		return
-	}
-
-	if pets == nil {
-		pets = make([]*models.Pet, 0)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(pets)
-}
-
-// GetAllPublic godoc (PUBLIC - NO AUTH REQUIRED)
-// @Summary List all pets (public)
-// @Description Retrieve all pets (public endpoint)
-// @Tags Pets
-// @Accept json
-// @Produce json
-// @Success 200 {array} models.Pet
-// @Failure 500 {object} map[string]string "Server error"
-// @Router /pets [get]
-func (c *PetController) GetAllPublic(w http.ResponseWriter, r *http.Request) {
-	// When an owner_id filter is provided, return only that client's pets.
+	// When an owner_id filter is provided, return only that client's pets,
+	// but only after confirming the client belongs to the authenticated vet.
 	if ownerID := r.URL.Query().Get("owner_id"); ownerID != "" {
 		objectID, err := primitive.ObjectIDFromHex(ownerID)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, "Invalid owner_id format")
+			return
+		}
+
+		client, err := c.clientRepo.FindByID(r.Context(), objectID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "Failed to verify client ownership")
+			return
+		}
+		if client == nil {
+			writeError(w, http.StatusNotFound, "Client not found")
+			return
+		}
+		if err := validateResourceOwnership(client.VetID, userID); err != nil {
+			writeError(w, http.StatusForbidden, "Access denied")
 			return
 		}
 
@@ -209,7 +207,6 @@ func (c *PetController) GetAllPublic(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, "Failed to retrieve pets")
 			return
 		}
-
 		if pets == nil {
 			pets = make([]*models.Pet, 0)
 		}
@@ -219,8 +216,7 @@ func (c *PetController) GetAllPublic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pets, err := c.repo.FindAll(r.Context())
-
+	pets, err := c.repo.FindByVetID(r.Context(), userID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Failed to retrieve pets")
 		return
@@ -232,41 +228,6 @@ func (c *PetController) GetAllPublic(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(pets)
-}
-
-// GetByIDPublic godoc (PUBLIC - NO AUTH REQUIRED)
-// @Summary Get pet by ID (public)
-// @Description Get a specific pet by their ID (public endpoint)
-// @Tags Pets
-// @Accept json
-// @Produce json
-// @Param id path string true "Pet ID"
-// @Success 200 {object} models.Pet
-// @Failure 400 {object} map[string]string "Invalid ID"
-// @Failure 404 {object} map[string]string "Pet not found"
-// @Failure 500 {object} map[string]string "Server error"
-// @Router /pets/{id} [get]
-func (c *PetController) GetByIDPublic(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid pet ID")
-		return
-	}
-
-	pet, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "Failed to retrieve pet")
-		return
-	}
-
-	if pet == nil {
-		writeError(w, http.StatusNotFound, "Pet not found")
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(pet)
 }
 
 // Update godoc
@@ -422,6 +383,24 @@ func (c *PetController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Cascade delete: Then delete all prescriptions for this pet
+	if err := c.prescriptionRepo.DeleteByPetID(ctx, objectID); err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to delete pet prescriptions")
+		return
+	}
+
+	// Cascade delete: Then delete all appointments for this pet
+	if err := c.appointmentRepo.DeleteByPetID(ctx, objectID); err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to delete pet appointments")
+		return
+	}
+
+	// Cascade delete: Then delete all attachments for this pet
+	if err := c.attachmentRepo.DeleteByPetID(ctx, objectID); err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to delete pet attachments")
+		return
+	}
+
 	// Finally delete the pet itself
 	if err := c.repo.Delete(ctx, objectID); err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -435,16 +414,37 @@ func (c *PetController) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// validatePet validates required fields
+// validatePet validates pet fields. Name, Species and OwnerID are required.
+// Species is intentionally not restricted to a fixed list because the seeds use
+// pt-BR values (Cachorro/Gato/Coelho). Age/Weight have sane bounds and, when
+// informed, AgeUnit and Sex must belong to the accepted sets.
 func validatePet(pet *models.Pet) error {
-	if pet.Name == "" {
-		return errValidation("name is required")
+	if strings.TrimSpace(pet.Name) == "" {
+		return errValidationWithDetails("name", "nome é obrigatório")
 	}
-	if pet.Species == "" {
-		return errValidation("species is required")
+	if strings.TrimSpace(pet.Species) == "" {
+		return errValidationWithDetails("species", "espécie é obrigatória")
 	}
 	if pet.OwnerID.IsZero() {
-		return errValidation("owner_id is required")
+		return errValidationWithDetails("owner_id", "proprietário é obrigatório")
+	}
+	if pet.Age < 0 || pet.Age > 600 {
+		return errValidationWithDetails("age", "idade deve estar entre 0 e 600")
+	}
+	if pet.AgeUnit != "" {
+		switch pet.AgeUnit {
+		case "meses", "anos", "months", "years":
+		default:
+			return errValidationWithDetails("age_unit", "unidade de idade inválida (use meses, anos, months ou years)")
+		}
+	}
+	switch pet.Sex {
+	case "", "M", "F", "male", "female":
+	default:
+		return errValidationWithDetails("sex", "sexo inválido (use M, F, male ou female)")
+	}
+	if pet.Weight < 0 || pet.Weight > 200 {
+		return errValidationWithDetails("weight", "peso deve estar entre 0 e 200")
 	}
 	return nil
 }
