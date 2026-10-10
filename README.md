@@ -1,567 +1,222 @@
-# VetFlow - Veterinary Management System API
+# VetFlow Backend — Veterinary Management System API
 
-A production-ready REST API for managing veterinary clinics, built with Go, MongoDB, and following SOLID principles and MVC architecture.
+A production-ready REST API for managing veterinary clinics, built with **Go** and
+**MongoDB**, following SOLID principles and an MVC-style architecture.
+
+> This is the backend of the [VetFlow monorepo](../README.md). For the web client, see
+> [`vetflow-frontend`](../vetflow-frontend/README.md).
+
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Architecture](#architecture)
+- [Prerequisites](#prerequisites)
+- [Setup](#setup)
+- [Environment Variables](#environment-variables)
+- [Running](#running)
+- [Testing](#testing)
+- [Build](#build)
+- [API Docs](#api-docs)
+- [Package Documentation](#package-documentation)
+- [Git Hooks](#git-hooks--merge-conflict-marker-gate)
+- [License](#license)
+
+---
 
 ## Features
 
-- **Authentication**: Email/password registration and login with JWT, email verification, plus social login (OAuth) and OAuth callback flow
-- **User Management**: Profile updates, profile picture management, and password changes (protected routes)
-- **Client Management**: Register and manage veterinary clinic clients
-- **Pet Management**: Track pets with detailed information (species, breed, age, weight)
-- **Consultation Records**: Store comprehensive consultation notes with anamnesis, diet, and physiological data
-- **Vaccine Tracking**: Maintain vaccine records with batch information and next dose dates
-- **Notifications**: Generate and manage notifications for upcoming consultations and vaccines
-- **RESTful API**: Clean, intuitive endpoints following REST conventions
-- **MongoDB Integration**: Scalable NoSQL database for flexible data storage
-- **Docker Support**: Easy deployment with Docker and Docker Compose
-- **SOLID Principles**: Well-structured, maintainable, and extensible codebase
+- **Authentication** — email/password with JWT, email verification, social login (OAuth) and OAuth callback flow
+- **User Management** — profile and profile-picture updates, password change/set (protected routes)
+- **Client Management** — register and manage clinic clients
+- **Pet Management** — track pets (species, breed, age, weight), cascading deletes
+- **Consultation Records** — anamnesis, diet and physiological data
+- **Vaccine Tracking** — batch info and next-dose scheduling
+- **Notifications** — generated for upcoming consultations/vaccines, with an SMTP email scheduler
+- **MongoDB Integration** — flexible NoSQL storage with explicit index creation
+- **Docker Support** — `docker-compose` for one-command local runs
+- **SOLID / Interface-based design** — repository pattern + dependency injection for testability
+
+---
 
 ## Architecture
 
-### Design Pattern
-- **MVC (Model-View-Controller)** adapted for REST APIs
-- Dependency Injection for loose coupling
-- Repository pattern for data access abstraction
-- Interface-based design for testability
+**Pattern:** MVC adapted for REST, with dependency injection, the repository pattern
+for data-access abstraction, and interface-based design for testability.
 
-### Project Structure
+The codebase is split into focused packages. Each package has its own README with
+layer-specific detail — see [Package Documentation](#package-documentation) below.
 
 ```
-vetflow-backend/
-├── cmd/
-│   └── main.go                      # Entry point
-├── config/
-│   └── config.go                    # Configuration management
-├── db/
-│   ├── mongo.go                     # MongoDB connection
-│   └── seed.go                      # Test data seeding
-├── models/
-│   ├── client.go
-│   ├── pet.go
-│   ├── consultation.go
-│   ├── vaccine.go
-│   ├── user.go
-│   ├── notification.go
-│   └── errors.go
-├── repositories/
-│   ├── interfaces.go                # Repository interfaces
-│   ├── client_repository.go
-│   ├── pet_repository.go
-│   ├── consultation_repository.go
-│   ├── vaccine_repository.go
-│   ├── user_repository.go
-│   └── notification_repository.go
-├── services/
-│   └── notification_service.go
-├── controllers/
-│   ├── client_controller.go
-│   ├── pet_controller.go
-│   ├── consultation_controller.go
-│   ├── vaccine_controller.go
-│   ├── auth_controller.go
-│   ├── user_controller.go
-│   ├── social_auth_controller.go
-│   ├── oauth_callback_controller.go
-│   ├── notification_controller.go
-│   └── helpers.go
-├── helpers/
-│   ├── image.go
-│   └── password.go
-├── routes/
-│   ├── router.go                    # Route definitions
-│   └── middleware.go                # Auth middleware
-├── docs/                            # Swagger docs
-├── docker-compose.yml
-├── Dockerfile
-├── .env.example
-├── go.mod
-└── README.md
+cmd/           → Entry point & server wiring
+config/        → Environment configuration loading
+db/            → MongoDB connection, indexes, seed data
+models/        → Domain structs & validation
+repositories/  → Data-access layer (interfaces + Mongo implementations)
+services/      → Business logic (notification generation & email scheduler)
+controllers/   → HTTP handlers
+routes/        → Router, middleware, rate limiter
+helpers/       → Shared utilities (JWT, images, passwords, email, validation)
 ```
+
+Request flow: `routes` → `controllers` → `repositories`/`services` → `models` → MongoDB (`db`).
+
+---
 
 ## Prerequisites
 
 - Go 1.22 or higher
-- Docker and Docker Compose (optional, for containerized deployment)
-- MongoDB 7.0+ (if running locally)
+- Docker and Docker Compose (optional, for containerized runs)
+- MongoDB 7.0+ (if running without Docker)
+
+---
 
 ## Setup
 
-### 1. Install Dependencies
+Run all commands from this directory (`vetflow-backend/`).
 
-Run all commands from the repository root (this repo is the backend).
+### 1. Install dependencies
 
 ```bash
 go mod download
 ```
 
-### 2. Configure Environment
+### 2. Create your `.env`
 
-**Windows (PowerShell):**
 ```powershell
+# Windows (PowerShell)
 copy .env.example .env
-# Edit .env with your settings
 ```
 
-**Mac/Linux:**
 ```bash
+# macOS / Linux
 cp .env.example .env
-nano .env  # or your preferred editor
 ```
 
-### 3. Run with Docker Compose (Recommended - All Platforms)
+Then edit `.env` — see [Environment Variables](#environment-variables).
 
-From the root directory:
+---
 
-```powershell
-# Windows / Mac / Linux
+## Environment Variables
+
+Source of truth is [`.env.example`](.env.example). Key variables:
+
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `MONGO_URI` | yes | — | MongoDB connection string (local or Atlas) |
+| `MONGO_DB` | yes | `vetflow` | Database name |
+| `PORT` | no | `8080` | HTTP listen port |
+| `APP_ENV` | no | `development` | `development` or `production` |
+| `JWT_SECRET` | **yes (all envs)** | — | JWT signing secret. The app **refuses to start** without it — no dev fallback. Generate with `openssl rand -hex 32` |
+| `CORS_ALLOWED_ORIGINS` | no | `*` | Comma-separated allowed origins; empty allows all |
+| `AUTH_RATE_LIMIT_PER_MIN` | no | `10` | Per-IP/minute limit on `/auth/login` & `/auth/register`; `0` disables |
+| `EMAIL_NOTIFICATIONS_ENABLED` | no | `true` | Enables the daily email reminder scheduler |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` / `SMTP_FROM_NAME` | no | — | SMTP settings; if `SMTP_HOST` is empty the mailer runs in log-only mode |
+
+---
+
+## Running
+
+### With Docker Compose (recommended)
+
+[`docker-compose.yml`](docker-compose.yml) builds the image, injects your `.env`, and
+requires `JWT_SECRET` to be set (the container fails fast otherwise).
+
+```bash
 docker-compose up -d
-
-# The API will be available at http://localhost:8080
+# API available at http://localhost:8080
 ```
 
-### 4. Run Locally
+Set `SEED_FORCE=true` in your shell to force a clean re-seed on startup.
 
-**Start MongoDB first:**
+### Locally (Go toolchain)
+
+Start MongoDB (e.g. via Docker):
 
 ```powershell
 docker run -d -p 27017:27017 `
   -e MONGO_INITDB_ROOT_USERNAME=admin `
   -e MONGO_INITDB_ROOT_PASSWORD=admin `
-  mongo:7.0
+  --name vetflow-mongo mongo:7.0
 ```
 
-**Update `.env` file:**
-```env
-MONGO_URI=mongodb://admin:admin@localhost:27017
-MONGO_DB=vetflow
-PORT=8080
-```
+Point `.env` at it (`MONGO_URI=mongodb://admin:admin@localhost:27017`), then:
 
-**Run the application:**
-
-```powershell
-# Windows
+```bash
 go run ./cmd/main.go
-
-# Mac/Linux
-go run ./cmd/main.go
+# API available at http://localhost:8080
 ```
 
-The API will be available at `http://localhost:8080`
+---
 
-## API Endpoints
-
-> **Auth model**: Read-only `GET` endpoints for clients, pets, consultations and vaccines are public. All `POST`/`PUT`/`DELETE` endpoints are protected and require the auth middleware (send the token as configured by the middleware). User and notification routes are fully protected.
-
-Interactive API docs are available at `GET /swagger` (redirects to `/swagger/index.html`).
-
-### Health Check
-- `GET /health` - Check API status
-
-### Authentication
-- `POST /auth/register` - Register a new user
-- `POST /auth/login` - Log in with email/password
-- `POST /auth/social-login` - Log in via social provider
-- `POST /auth/oauth/callback` - OAuth callback handler
-- `GET /auth/verify/{token}` - Verify email/account with token
-
-### Users (protected)
-- `PUT /users/profile` - Update profile
-- `PUT /users/profile-picture` - Update profile picture
-- `DELETE /users/profile-picture` - Remove profile picture
-- `PUT /users/password` - Change password
-- `PUT /users/password/set` - Set password (for accounts created via social login)
-
-### Clients
-- `GET /clients` - List all clients *(public)*
-- `GET /clients/{id}` - Get client by ID *(public)*
-- `POST /clients` - Create a new client *(protected)*
-- `PUT /clients/{id}` - Update client *(protected)*
-- `DELETE /clients/{id}` - Delete client, cascades to pets, consultations, vaccines *(protected)*
-
-### Pets
-- `GET /pets` - List all pets *(public)*
-- `GET /pets?owner_id={clientId}` - List pets by owner *(public)*
-- `GET /pets/{id}` - Get pet by ID *(public)*
-- `POST /pets` - Create a new pet *(protected)*
-- `PUT /pets/{id}` - Update pet *(protected)*
-- `DELETE /pets/{id}` - Delete pet, cascades to consultations, vaccines *(protected)*
-
-### Consultations
-- `GET /consultations/{id}` - Get consultation by ID *(public)*
-- `POST /consultations` - Create a new consultation *(protected)*
-- `PUT /consultations/{id}` - Update consultation *(protected)*
-- `DELETE /consultations/{id}` - Delete consultation *(protected)*
-
-### Vaccines
-- `GET /vaccines` - List all vaccine records *(public)*
-- `GET /vaccines/{id}` - Get vaccine by ID *(public)*
-- `POST /vaccines` - Create a new vaccine record *(protected)*
-- `PUT /vaccines/{id}` - Update vaccine record *(protected)*
-- `DELETE /vaccines/{id}` - Delete vaccine record *(protected)*
-
-### Notifications (protected)
-- `POST /notifications/generate` - Generate notifications for upcoming consultations/vaccines
-- `GET /notifications` - List notifications
-- `PUT /notifications/{id}/read` - Mark a notification as read
-- `PUT /notifications/{id}/dismiss` - Dismiss a notification
-
-## API Examples
-
-### Create a Client
-
-**Mac/Linux (curl):**
-```bash
-curl -X POST http://localhost:8080/clients \
-  -H "Content-Type: application/json" \
-  -d '{
-    "full_name": "João Silva",
-    "cpf": "123.456.789-00",
-    "phone": "(11) 98765-4321",
-    "address": {
-      "street": "Rua das Flores",
-      "number": "123",
-      "complement": "Apt 45",
-      "zip_code": "01234-567"
-    }
-  }'
-```
-
-**Windows (PowerShell):**
-```powershell
-$body = @{
-    full_name = "João Silva"
-    cpf = "123.456.789-00"
-    phone = "(11) 98765-4321"
-    address = @{
-        street = "Rua das Flores"
-        number = "123"
-        complement = "Apt 45"
-        zip_code = "01234-567"
-    }
-} | ConvertTo-Json
-
-Invoke-WebRequest -Uri http://localhost:8080/clients `
-  -Method POST `
-  -Headers @{"Content-Type"="application/json"} `
-  -Body $body
-```
-
-### Create a Pet
-
-**Mac/Linux (curl):**
-```bash
-curl -X POST http://localhost:8080/pets \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Rex",
-    "species": "dog",
-    "breed": "Labrador",
-    "age": 3,
-    "age_unit": "years",
-    "sex": "male",
-    "neutered": true,
-    "weight": 32.5,
-    "owner_id": "your_client_id_here"
-  }'
-```
-
-**Windows (PowerShell):**
-```powershell
-$body = @{
-    name = "Rex"
-    species = "dog"
-    breed = "Labrador"
-    age = 3
-    age_unit = "years"
-    sex = "male"
-    neutered = $true
-    weight = 32.5
-    owner_id = "your_client_id_here"
-} | ConvertTo-Json
-
-Invoke-WebRequest -Uri http://localhost:8080/pets `
-  -Method POST `
-  -Headers @{"Content-Type"="application/json"} `
-  -Body $body
-```
-
-### Create a Consultation
+## Testing
 
 ```bash
-curl -X POST http://localhost:8080/consultations \
-  -H "Content-Type: application/json" \
-  -d '{
-    "pet_id": "your_pet_id_here",
-    "vet_name": "Dr. Maria Santos",
-    "date": "2024-05-04T14:30:00Z",
-    "anamnesis": {
-      "main_complaint": "Cough and sneezing",
-      "evolution_time": "2 weeks",
-      "symptoms_worsened": false,
-      "symptom_frequency": "occasional",
-      "behavior_change": false,
-      "pain": false,
-      "happened_before": false,
-      "prior_vet_visit": true
-    },
-    "diet": {
-      "food_type": "dry kibble",
-      "amount_and_frequency": "2 cups twice daily",
-      "diet_changed_recently": false,
-      "normal_water_intake": true
-    },
-    "physiological": {
-      "normal_urine_feces": true,
-      "vomiting": false,
-      "respiratory_issues": true
-    },
-    "summary": {
-      "main_complaint": "Upper respiratory infection",
-      "evolution_time": "2 weeks",
-      "feeding": "Normal appetite",
-      "feces_urine": "Normal",
-      "vaccines_and_deworming": "Up to date",
-      "medications": "None current",
-      "environment_and_contacts": "Multiple pets in household"
-    }
-  }'
-```
-
-### Record a Vaccine
-
-```bash
-curl -X POST http://localhost:8080/vaccines \
-  -H "Content-Type: application/json" \
-  -d '{
-    "pet_id": "your_pet_id_here",
-    "vaccine_name": "Rabies",
-    "batch": "BATCH2024001",
-    "manufacturer": "MSD",
-    "date_applied": "2024-05-04T10:00:00Z",
-    "next_dose_date": "2025-05-04T10:00:00Z",
-    "vet_name": "Dr. Maria Santos",
-    "notes": "No adverse reactions"
-  }'
-```
-
-## Error Handling
-
-All errors follow a consistent JSON format:
-
-```json
-{
-  "error": "error message description"
-}
-```
-
-### HTTP Status Codes
-- `200 OK` - Successful request
-- `201 Created` - Resource successfully created
-- `204 No Content` - Successful deletion
-- `400 Bad Request` - Invalid input or malformed request
-- `404 Not Found` - Resource not found
-- `500 Internal Server Error` - Server-side error
-
-## Data Models
-
-### Client
-- `id`: MongoDB ObjectID (auto-generated)
-- `full_name`: string (required)
-- `cpf`: string (required, unique)
-- `phone`: string (required)
-- `address`: object (street, number, complement, zip_code)
-- `created_at`: timestamp
-- `updated_at`: timestamp
-
-### Pet
-- `id`: MongoDB ObjectID (auto-generated)
-- `name`: string (required)
-- `species`: string (required) - e.g., "dog", "cat"
-- `breed`: string
-- `age`: integer
-- `age_unit`: string - "months" or "years"
-- `sex`: string - "male" or "female"
-- `neutered`: boolean
-- `weight`: float64 (kg)
-- `owner_id`: MongoDB ObjectID (required) - references Client
-- `created_at`: timestamp
-- `updated_at`: timestamp
-
-### Consultation
-- `id`: MongoDB ObjectID (auto-generated)
-- `pet_id`: MongoDB ObjectID (required) - references Pet
-- `vet_name`: string
-- `date`: timestamp
-- `anamnesis`: object - detailed medical history
-- `diet`: object - dietary information
-- `physiological`: object - physiological observations
-- `summary`: object - consultation summary
-- `created_at`: timestamp
-
-### Vaccine
-- `id`: MongoDB ObjectID (auto-generated)
-- `pet_id`: MongoDB ObjectID (required) - references Pet
-- `vaccine_name`: string (required)
-- `batch`: string
-- `manufacturer`: string
-- `date_applied`: timestamp
-- `next_dose_date`: timestamp
-- `vet_name`: string
-- `notes`: string
-- `created_at`: timestamp
-
-### User
-- `id`: MongoDB ObjectID (auto-generated)
-- `name`: string
-- `email`: string (required, unique) - login identifier
-- `password`: string (hashed; empty for social-only accounts)
-- `provider`: string - auth provider (e.g. "local", "google")
-- `profile_picture`: string
-- `verified`: boolean - email verification status
-- `created_at` / `updated_at`: timestamp
-
-### Notification
-- `id`: MongoDB ObjectID (auto-generated)
-- `type`: string - e.g. upcoming consultation / vaccine
-- `message`: string
-- `read`: boolean
-- `dismissed`: boolean
-- `created_at`: timestamp
-
-> The `User` and `Notification` fields above reflect the general shape of the models; check `models/user.go` and `models/notification.go` for the authoritative struct definitions.
-
-## SOLID Principles Applied
-
-### Single Responsibility (S)
-Each file/struct handles one concern:
-- Models: Data structure and validation
-- Repositories: Data access
-- Controllers: HTTP request handling
-- Routes: Endpoint registration
-
-### Open/Closed (O)
-- Interfaces define contracts
-- New repositories can be added without modifying existing code
-- Controllers depend on interfaces, not implementations
-
-### Liskov Substitution (L)
-- All repository implementations are interchangeable
-- Concrete repositories properly implement their interfaces
-
-### Interface Segregation (I)
-- Repository interfaces are focused and specific
-- ClientRepository doesn't include pet methods
-- Controllers only depend on needed functionality
-
-### Dependency Inversion (D)
-- Controllers depend on repository interfaces, not concrete types
-- Dependency injection via constructor
-- Easy to swap implementations for testing
-
-## Development
-
-### Running Tests
-
-```bash
+# Run the full test suite
 go test ./...
-```
 
-### Build Locally
-
-```bash
-# Build binary
-go build -o vetflow ./cmd/main.go
-```
-
-### Windows Development Setup
-
-**Install Go (Windows):**
-1. Download from https://golang.org/dl/
-2. Run the installer
-3. Restart your terminal
-4. Verify: `go version`
-
-**Install MongoDB locally (Windows):**
-```powershell
-# Using Docker (recommended)
-docker run -d -p 27017:27017 `
-  -e MONGO_INITDB_ROOT_USERNAME=admin `
-  -e MONGO_INITDB_ROOT_PASSWORD=admin `
-  --name vetflow-mongo `
-  mongo:7.0
-
-# Or download from https://www.mongodb.com/try/download/community
-```
-
-**Code Formatting and Linting:**
-```powershell
-# Format code
-go fmt ./...
-
-# Lint with golangci-lint (requires installation)
-golangci-lint run ./...
-
-# Or simpler linting
+# Vet / format
 go vet ./...
+go fmt ./...
 ```
 
-## Building
+---
 
-**Build binary:**
+## Build
 
 ```powershell
 # Windows
 go build -o vetflow.exe ./cmd/main.go
+```
 
-# Mac/Linux
+```bash
+# macOS / Linux
 go build -o vetflow ./cmd/main.go
 ```
 
-**Build Docker image (all platforms):**
-
-From the repository root:
-```powershell
+```bash
+# Docker image
 docker build -t vetflow:latest .
 ```
 
-## Database Indexes
+---
 
-For optimal performance, create the following indexes:
+## API Docs
 
-```javascript
-// Clients collection
-db.clients.createIndex({ cpf: 1 }, { unique: true })
+Interactive Swagger docs are served at `GET /swagger` (redirects to
+`/swagger/index.html`). The spec is generated into [`docs/`](docs/).
 
-// Pets collection
-db.pets.createIndex({ owner_id: 1 })
-
-// Consultations collection
-db.consultations.createIndex({ pet_id: 1 })
-
-// Vaccines collection
-db.vaccines.createIndex({ pet_id: 1 })
-```
-
-## License
-
-MIT License
-
-## Support
-
-For issues or questions, please open an issue in the repository.
+Endpoint and route-level detail lives in the [`routes/`](routes/README.md) and
+[`controllers/`](controllers/README.md) package READMEs.
 
 ---
 
-**Built with Go, MongoDB, and ❤️ for veterinary professionals.**
+## Package Documentation
 
+Each package documents only its own layer. Start at the layer you are working in:
+
+| Package | Responsibility | README |
+| --- | --- | --- |
+| `cmd/` | Application entry point and server wiring | [cmd/README.md](cmd/README.md) |
+| `config/` | Environment configuration loading & validation | [config/README.md](config/README.md) |
+| `db/` | MongoDB connection, index creation, data seeding | [db/README.md](db/README.md) |
+| `models/` | Domain structs, validation, error types | [models/README.md](models/README.md) |
+| `repositories/` | Data-access layer (interfaces + Mongo implementations) | [repositories/README.md](repositories/README.md) |
+| `services/` | Business logic: notification generation & email scheduler | [services/README.md](services/README.md) |
+| `controllers/` | HTTP request handlers | [controllers/README.md](controllers/README.md) |
+| `routes/` | Router, auth middleware, rate limiter | [routes/README.md](routes/README.md) |
+| `helpers/` | Shared utilities: JWT, images, passwords, email, validation | [helpers/README.md](helpers/README.md) |
+
+---
 
 ## Git Hooks — Merge Conflict Marker Gate
 
 This repo ships a tracked `pre-commit` hook that refuses any commit containing
 unresolved git merge conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`). The same
 check runs in CI as the `no-conflict-markers` job in
-`.github/workflows/ci.yml`, so a commit that passes locally also passes CI.
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml), so a commit that passes
+locally also passes CI.
 
 ### Activate the hook (once per clone)
 
@@ -578,8 +233,8 @@ bash scripts/install-hooks.sh
 powershell -ExecutionPolicy Bypass -File scripts\install-hooks.ps1
 ```
 
-Both do the same thing: `git config core.hooksPath .githooks`. Git for Windows
-runs the bash hook through its bundled `sh`, so no extra setup is required.
+Both run `git config core.hooksPath .githooks`. Git for Windows runs the bash hook
+through its bundled `sh`, so no extra setup is required.
 
 ### Behaviour
 
@@ -589,3 +244,13 @@ runs the bash hook through its bundled `sh`, so no extra setup is required.
 - Emergency bypass (discouraged): `git commit --no-verify`.
 - The gate is enforced regardless of the hook in CI, so a bypassed local commit
   is still rejected on push / pull request.
+
+---
+
+## License
+
+MIT License
+
+---
+
+**Built with Go, MongoDB, and ❤️ for veterinary professionals.**
