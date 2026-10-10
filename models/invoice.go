@@ -21,12 +21,12 @@ const (
 type PaymentMethod string
 
 const (
-	MethodCash       PaymentMethod = "cash"        // Dinheiro
-	MethodCard       PaymentMethod = "card"        // Cartão
-	MethodPix        PaymentMethod = "pix"         // Pix
-	MethodTransfer   PaymentMethod = "transfer"    // Transferência
-	MethodBoleto     PaymentMethod = "boleto"      // Boleto
-	MethodUnassigned PaymentMethod = ""            // Não informado
+	MethodCash       PaymentMethod = "cash"     // Dinheiro
+	MethodCard       PaymentMethod = "card"     // Cartão
+	MethodPix        PaymentMethod = "pix"      // Pix
+	MethodTransfer   PaymentMethod = "transfer" // Transferência
+	MethodBoleto     PaymentMethod = "boleto"   // Boleto
+	MethodUnassigned PaymentMethod = ""         // Não informado
 )
 
 // InvoiceItem represents a single billable line in an invoice

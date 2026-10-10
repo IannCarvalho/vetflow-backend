@@ -32,16 +32,16 @@ const (
 
 // Appointment represents a scheduled visit in the agenda/calendar
 type Appointment struct {
-	ID          primitive.ObjectID  `bson:"_id,omitempty" json:"id,omitempty"`
-	VetID       primitive.ObjectID  `bson:"vet_id" json:"vet_id"`
-	PetID       primitive.ObjectID  `bson:"pet_id" json:"pet_id"`
-	ClientID    primitive.ObjectID  `bson:"client_id,omitempty" json:"client_id,omitempty"`
-	Title       string              `bson:"title" json:"title"`
-	Type        AppointmentType     `bson:"type" json:"type"`
-	Status      AppointmentStatus   `bson:"status" json:"status"`
-	StartTime   time.Time           `bson:"start_time" json:"start_time"`
-	EndTime     time.Time           `bson:"end_time" json:"end_time"`
-	Notes       string              `bson:"notes" json:"notes"`
-	CreatedAt   time.Time           `bson:"created_at" json:"created_at"`
-	UpdatedAt   time.Time           `bson:"updated_at" json:"updated_at"`
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	VetID     primitive.ObjectID `bson:"vet_id" json:"vet_id"`
+	PetID     primitive.ObjectID `bson:"pet_id" json:"pet_id"`
+	ClientID  primitive.ObjectID `bson:"client_id,omitempty" json:"client_id,omitempty"`
+	Title     string             `bson:"title" json:"title"`
+	Type      AppointmentType    `bson:"type" json:"type"`
+	Status    AppointmentStatus  `bson:"status" json:"status"`
+	StartTime time.Time          `bson:"start_time" json:"start_time"`
+	EndTime   time.Time          `bson:"end_time" json:"end_time"`
+	Notes     string             `bson:"notes" json:"notes"`
+	CreatedAt time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt time.Time          `bson:"updated_at" json:"updated_at"`
 }

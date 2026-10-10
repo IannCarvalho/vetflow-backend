@@ -33,7 +33,8 @@ func NewMongoConnection(mongoURI string) (*mongo.Client, error) {
 	err = client.Ping(pingCtx, nil)
 	if err != nil {
 		log.Printf("MongoDB ping failed: %v", err)
-		client.Disconnect(context.Background())
+		// Best-effort cleanup; the ping error below is the one that matters.
+		_ = client.Disconnect(context.Background())
 		return nil, err
 	}
 

@@ -49,7 +49,7 @@ func (r *mongoInvoiceRepository) FindByVetID(ctx context.Context, vetID primitiv
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var invoices []*models.Invoice
 	if err = cursor.All(ctx, &invoices); err != nil {
@@ -65,13 +65,19 @@ func (r *mongoInvoiceRepository) FindByClientID(ctx context.Context, clientID pr
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var invoices []*models.Invoice
 	if err = cursor.All(ctx, &invoices); err != nil {
 		return nil, err
 	}
 	return invoices, nil
+}
+
+// CountByVetIDAndStatus counts invoices for a vet with the given payment status,
+// without loading them.
+func (r *mongoInvoiceRepository) CountByVetIDAndStatus(ctx context.Context, vetID primitive.ObjectID, status models.PaymentStatus) (int64, error) {
+	return r.collection.CountDocuments(ctx, bson.M{"vet_id": vetID, "status": status})
 }
 
 // Update updates an existing invoice

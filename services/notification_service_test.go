@@ -36,6 +36,9 @@ func (f *fakeConsultationRepo) Update(context.Context, primitive.ObjectID, *mode
 }
 func (f *fakeConsultationRepo) Delete(context.Context, primitive.ObjectID) error        { return nil }
 func (f *fakeConsultationRepo) DeleteByPetID(context.Context, primitive.ObjectID) error { return nil }
+func (f *fakeConsultationRepo) CountByVetIDInRange(context.Context, primitive.ObjectID, time.Time, time.Time) (int64, error) {
+	return 0, nil
+}
 
 type fakeVaccineRepo struct {
 	byVet map[primitive.ObjectID][]*models.Vaccine
@@ -58,6 +61,9 @@ func (f *fakeVaccineRepo) Update(context.Context, primitive.ObjectID, *models.Va
 }
 func (f *fakeVaccineRepo) Delete(context.Context, primitive.ObjectID) error        { return nil }
 func (f *fakeVaccineRepo) DeleteByPetID(context.Context, primitive.ObjectID) error { return nil }
+func (f *fakeVaccineRepo) CountByVetIDNextDoseInRange(context.Context, primitive.ObjectID, time.Time, time.Time) (int64, error) {
+	return 0, nil
+}
 
 type fakePetRepo struct {
 	pets           map[primitive.ObjectID]*models.Pet
@@ -92,6 +98,9 @@ func (f *fakePetRepo) FindByVetID(context.Context, primitive.ObjectID) ([]*model
 func (f *fakePetRepo) Update(context.Context, primitive.ObjectID, *models.Pet) error { return nil }
 func (f *fakePetRepo) Delete(context.Context, primitive.ObjectID) error              { return nil }
 func (f *fakePetRepo) DeleteByClientID(context.Context, primitive.ObjectID) error    { return nil }
+func (f *fakePetRepo) CountByVetID(context.Context, primitive.ObjectID) (int64, error) {
+	return 0, nil
+}
 
 type fakeNotificationRepo struct {
 	created []*models.Notification

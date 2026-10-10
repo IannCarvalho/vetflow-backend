@@ -61,7 +61,11 @@ func main() {
 		log.Fatalf("[MAIN] FATAL: Failed to connect to MongoDB: %v", err)
 	}
 	log.Println("[MAIN] MongoDB connection successful")
-	defer db.CloseConnection(client)
+	defer func() {
+		if err := db.CloseConnection(client); err != nil {
+			log.Printf("[MAIN] WARNING: Failed to close MongoDB connection: %v", err)
+		}
+	}()
 
 	// Get database instance
 	log.Println("[MAIN] Getting database instance...")

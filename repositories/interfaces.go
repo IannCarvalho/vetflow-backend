@@ -14,6 +14,7 @@ type ClientRepository interface {
 	FindByID(ctx context.Context, id primitive.ObjectID) (*models.Client, error)
 	FindAll(ctx context.Context) ([]*models.Client, error)
 	FindByVetID(ctx context.Context, vetID primitive.ObjectID) ([]*models.Client, error)
+	CountByVetID(ctx context.Context, vetID primitive.ObjectID) (int64, error)
 	Update(ctx context.Context, id primitive.ObjectID, client *models.Client) error
 	Delete(ctx context.Context, id primitive.ObjectID) error
 }
@@ -26,6 +27,7 @@ type PetRepository interface {
 	FindAll(ctx context.Context) ([]*models.Pet, error)
 	FindByOwnerID(ctx context.Context, ownerID primitive.ObjectID) ([]*models.Pet, error)
 	FindByVetID(ctx context.Context, vetID primitive.ObjectID) ([]*models.Pet, error)
+	CountByVetID(ctx context.Context, vetID primitive.ObjectID) (int64, error)
 	Update(ctx context.Context, id primitive.ObjectID, pet *models.Pet) error
 	Delete(ctx context.Context, id primitive.ObjectID) error
 	DeleteByClientID(ctx context.Context, clientID primitive.ObjectID) error
@@ -38,6 +40,7 @@ type ConsultationRepository interface {
 	FindAll(ctx context.Context) ([]*models.Consultation, error)
 	FindByPetID(ctx context.Context, petID primitive.ObjectID) ([]*models.Consultation, error)
 	FindByVetID(ctx context.Context, vetID primitive.ObjectID) ([]*models.Consultation, error)
+	CountByVetIDInRange(ctx context.Context, vetID primitive.ObjectID, start, end time.Time) (int64, error)
 	Update(ctx context.Context, id primitive.ObjectID, consultation *models.Consultation) error
 	Delete(ctx context.Context, id primitive.ObjectID) error
 	DeleteByPetID(ctx context.Context, petID primitive.ObjectID) error
@@ -50,6 +53,7 @@ type VaccineRepository interface {
 	FindAll(ctx context.Context) ([]*models.Vaccine, error)
 	FindByPetID(ctx context.Context, petID primitive.ObjectID) ([]*models.Vaccine, error)
 	FindByVetID(ctx context.Context, vetID primitive.ObjectID) ([]*models.Vaccine, error)
+	CountByVetIDNextDoseInRange(ctx context.Context, vetID primitive.ObjectID, start, end time.Time) (int64, error)
 	Update(ctx context.Context, id primitive.ObjectID, vaccine *models.Vaccine) error
 	Delete(ctx context.Context, id primitive.ObjectID) error
 	DeleteByPetID(ctx context.Context, petID primitive.ObjectID) error
@@ -92,6 +96,7 @@ type InvoiceRepository interface {
 	Create(ctx context.Context, invoice *models.Invoice) error
 	FindByID(ctx context.Context, id primitive.ObjectID) (*models.Invoice, error)
 	FindByVetID(ctx context.Context, vetID primitive.ObjectID) ([]*models.Invoice, error)
+	CountByVetIDAndStatus(ctx context.Context, vetID primitive.ObjectID, status models.PaymentStatus) (int64, error)
 	FindByClientID(ctx context.Context, clientID primitive.ObjectID) ([]*models.Invoice, error)
 	Update(ctx context.Context, id primitive.ObjectID, invoice *models.Invoice) error
 	Delete(ctx context.Context, id primitive.ObjectID) error
@@ -104,6 +109,7 @@ type AppointmentRepository interface {
 	FindByID(ctx context.Context, id primitive.ObjectID) (*models.Appointment, error)
 	FindByVetID(ctx context.Context, vetID primitive.ObjectID) ([]*models.Appointment, error)
 	FindByVetIDInRange(ctx context.Context, vetID primitive.ObjectID, start, end time.Time) ([]*models.Appointment, error)
+	CountByVetIDInRange(ctx context.Context, vetID primitive.ObjectID, start, end time.Time) (int64, error)
 	FindByPetID(ctx context.Context, petID primitive.ObjectID) ([]*models.Appointment, error)
 	Update(ctx context.Context, id primitive.ObjectID, appointment *models.Appointment) error
 	Delete(ctx context.Context, id primitive.ObjectID) error

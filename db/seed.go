@@ -34,14 +34,14 @@ func SeedDatabase(db *mongo.Database) error {
 	defer cancel()
 
 	// Create indices (idempotent - safe to run on every startup)
-	if err := createUserEmailIndex(db, ctx); err != nil {
+	if err := createUserEmailIndex(ctx, db); err != nil {
 		log.Printf("Warning: Failed to create email index: %v", err)
 	}
 
 	forceSeed := strings.EqualFold(os.Getenv("SEED_FORCE"), "true")
 
 	if forceSeed {
-		if err := clearCollections(db, ctx); err != nil {
+		if err := clearCollections(ctx, db); err != nil {
 			return fmt.Errorf("failed to clear collections: %w", err)
 		}
 		log.Println("SEED_FORCE=true -> database cleared for a clean re-seed")
@@ -58,7 +58,7 @@ func SeedDatabase(db *mongo.Database) error {
 		log.Println("Database is empty - seeding test data")
 	}
 
-	if err := seedTestData(db, ctx); err != nil {
+	if err := seedTestData(ctx, db); err != nil {
 		return fmt.Errorf("failed to seed test data: %w", err)
 	}
 
@@ -67,7 +67,7 @@ func SeedDatabase(db *mongo.Database) error {
 }
 
 // clearCollections drops all seeded collections.
-func clearCollections(db *mongo.Database, ctx context.Context) error {
+func clearCollections(ctx context.Context, db *mongo.Database) error {
 	collections := []string{
 		"users", "clients", "pets", "consultations", "vaccines",
 		"prescriptions", "catalog_items", "invoices", "appointments",
@@ -90,7 +90,7 @@ func dayAt(days int) time.Time {
 }
 
 // seedTestData populates the database with coherent, realistic sample data.
-func seedTestData(db *mongo.Database, ctx context.Context) error {
+func seedTestData(ctx context.Context, db *mongo.Database) error {
 	hashedPassword := helpers.HashPassword("123456")
 	now := time.Now()
 
@@ -535,7 +535,7 @@ func seedTestData(db *mongo.Database, ctx context.Context) error {
 }
 
 // createUserEmailIndex creates a unique index on the email field.
-func createUserEmailIndex(db *mongo.Database, ctx context.Context) error {
+func createUserEmailIndex(ctx context.Context, db *mongo.Database) error {
 	collection := db.Collection("users")
 	indexModel := mongo.IndexModel{
 		Keys:    bson.D{{Key: "email", Value: 1}},

@@ -65,7 +65,7 @@ func (c *VaccineController) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(vaccine)
+	_ = json.NewEncoder(w).Encode(vaccine)
 }
 
 // GetAll godoc
@@ -107,7 +107,7 @@ func (c *VaccineController) GetAll(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(vaccines)
+		_ = json.NewEncoder(w).Encode(vaccines)
 		return
 	}
 
@@ -123,7 +123,7 @@ func (c *VaccineController) GetAll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(vaccines)
+	_ = json.NewEncoder(w).Encode(vaccines)
 }
 
 // GetByID godoc
@@ -169,7 +169,7 @@ func (c *VaccineController) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(vaccine)
+	_ = json.NewEncoder(w).Encode(vaccine)
 }
 
 // Update godoc
@@ -240,7 +240,7 @@ func (c *VaccineController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(vaccine)
+	_ = json.NewEncoder(w).Encode(vaccine)
 }
 
 // Delete godoc

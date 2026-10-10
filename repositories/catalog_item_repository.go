@@ -49,7 +49,7 @@ func (r *mongoCatalogItemRepository) FindByVetID(ctx context.Context, vetID prim
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var items []*models.CatalogItem
 	if err = cursor.All(ctx, &items); err != nil {

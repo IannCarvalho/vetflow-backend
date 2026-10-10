@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,6 +11,17 @@ import (
 	"github.com/vetflow/veterinary-api/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
+
+// decodeErrorBody decodes a JSON error response body and returns its "error"
+// field, failing the test if the body is not valid JSON.
+func decodeErrorBody(t *testing.T, body []byte) string {
+	t.Helper()
+	var parsed errorResponse
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		t.Fatalf("decode error body: %v (raw: %s)", err, body)
+	}
+	return parsed.Error
+}
 
 // newPetControllerWithFakes wires a PetController to fresh fakes, returning the
 // controller plus the client and pet repos the tests seed and assert against.
@@ -178,6 +190,123 @@ func TestPetUnauthenticated(t *testing.T) {
 
 			if rec.Code != http.StatusUnauthorized {
 				t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
+			}
+		})
+	}
+}
+
+// TestPetCreateClientNotFound locks in the pet Create not-found mapping: when
+// the owning client does not exist, Create returns 400 with "Client not found".
+func TestPetCreateClientNotFound(t *testing.T) {
+	ctrl, _, petRepo := newPetControllerWithFakes()
+
+	vet := primitive.NewObjectID()
+	missingClient := primitive.NewObjectID()
+
+	body := models.Pet{Name: "Rex", Species: "dog", OwnerID: missingClient}
+	req := withUserID(httptest.NewRequest(http.MethodPost, "/pets", mustJSON(t, body)), vet)
+	rec := httptest.NewRecorder()
+	ctrl.Create(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d (body: %s)", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+	if got := decodeErrorBody(t, rec.Body.Bytes()); got != "Client not found" {
+		t.Fatalf("error = %q, want %q", got, "Client not found")
+	}
+	if len(petRepo.items) != 0 {
+		t.Errorf("expected no stored pet, got %d", len(petRepo.items))
+	}
+}
+
+// TestPetReadWriteClientNotFound locks in the shared read/update/delete not-found
+// mapping: when a pet exists but its owning client does not, GetByID, Update and
+// Delete each return 404 with "Client not found".
+func TestPetReadWriteClientNotFound(t *testing.T) {
+	vet := primitive.NewObjectID()
+	missingClient := primitive.NewObjectID()
+
+	tests := []struct {
+		name   string
+		method string
+		call   func(ctrl *PetController) func(http.ResponseWriter, *http.Request)
+	}{
+		{name: "GetByID", method: http.MethodGet, call: func(ctrl *PetController) func(http.ResponseWriter, *http.Request) { return ctrl.GetByID }},
+		{name: "Update", method: http.MethodPut, call: func(ctrl *PetController) func(http.ResponseWriter, *http.Request) { return ctrl.Update }},
+		{name: "Delete", method: http.MethodDelete, call: func(ctrl *PetController) func(http.ResponseWriter, *http.Request) { return ctrl.Delete }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl, _, petRepo := newPetControllerWithFakes()
+			// Pet exists, but its owning client was never seeded.
+			pet := seedPet(t, petRepo, missingClient)
+
+			req := httptest.NewRequest(tt.method, "/pets/"+pet.ID.Hex(), nil)
+			req = withIDParam(req, pet.ID, vet)
+			rec := httptest.NewRecorder()
+			tt.call(ctrl)(rec, req)
+
+			if rec.Code != http.StatusNotFound {
+				t.Fatalf("status = %d, want %d (body: %s)", rec.Code, http.StatusNotFound, rec.Body.String())
+			}
+			if got := decodeErrorBody(t, rec.Body.Bytes()); got != "Client not found" {
+				t.Fatalf("error = %q, want %q", got, "Client not found")
+			}
+		})
+	}
+}
+
+// TestPetClientRepoError locks in the DB-error mapping: when the client
+// repository returns an error from FindByID, the handlers return 500 with
+// "Failed to verify client ownership".
+func TestPetClientRepoError(t *testing.T) {
+	vet := primitive.NewObjectID()
+	owner := primitive.NewObjectID()
+
+	t.Run("Create", func(t *testing.T) {
+		ctrl, clientRepo, _ := newPetControllerWithFakes()
+		clientRepo.findByIDErr = errors.New("db down")
+
+		body := models.Pet{Name: "Rex", Species: "dog", OwnerID: owner}
+		req := withUserID(httptest.NewRequest(http.MethodPost, "/pets", mustJSON(t, body)), vet)
+		rec := httptest.NewRecorder()
+		ctrl.Create(rec, req)
+
+		if rec.Code != http.StatusInternalServerError {
+			t.Fatalf("status = %d, want %d (body: %s)", rec.Code, http.StatusInternalServerError, rec.Body.String())
+		}
+		if got := decodeErrorBody(t, rec.Body.Bytes()); got != "Failed to verify client ownership" {
+			t.Fatalf("error = %q, want %q", got, "Failed to verify client ownership")
+		}
+	})
+
+	readWrite := []struct {
+		name   string
+		method string
+		call   func(ctrl *PetController) func(http.ResponseWriter, *http.Request)
+	}{
+		{name: "GetByID", method: http.MethodGet, call: func(ctrl *PetController) func(http.ResponseWriter, *http.Request) { return ctrl.GetByID }},
+		{name: "Update", method: http.MethodPut, call: func(ctrl *PetController) func(http.ResponseWriter, *http.Request) { return ctrl.Update }},
+		{name: "Delete", method: http.MethodDelete, call: func(ctrl *PetController) func(http.ResponseWriter, *http.Request) { return ctrl.Delete }},
+	}
+
+	for _, tt := range readWrite {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl, clientRepo, petRepo := newPetControllerWithFakes()
+			pet := seedPet(t, petRepo, owner)
+			clientRepo.findByIDErr = errors.New("db down")
+
+			req := httptest.NewRequest(tt.method, "/pets/"+pet.ID.Hex(), nil)
+			req = withIDParam(req, pet.ID, vet)
+			rec := httptest.NewRecorder()
+			tt.call(ctrl)(rec, req)
+
+			if rec.Code != http.StatusInternalServerError {
+				t.Fatalf("status = %d, want %d (body: %s)", rec.Code, http.StatusInternalServerError, rec.Body.String())
+			}
+			if got := decodeErrorBody(t, rec.Body.Bytes()); got != "Failed to verify client ownership" {
+				t.Fatalf("error = %q, want %q", got, "Failed to verify client ownership")
 			}
 		})
 	}

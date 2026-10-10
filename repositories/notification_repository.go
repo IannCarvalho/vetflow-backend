@@ -61,7 +61,7 @@ func (r *notificationRepository) GetByVetID(ctx context.Context, vetID primitive
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var notifications []models.Notification
 	if err = cursor.All(ctx, &notifications); err != nil {
@@ -82,7 +82,7 @@ func (r *notificationRepository) GetPending(ctx context.Context, vetID primitive
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var notifications []models.Notification
 	if err = cursor.All(ctx, &notifications); err != nil {

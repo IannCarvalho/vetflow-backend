@@ -53,7 +53,7 @@ func (r *mongoAttachmentRepository) FindSummariesByPetID(ctx context.Context, pe
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var summaries []*models.AttachmentSummary
 	if err = cursor.All(ctx, &summaries); err != nil {

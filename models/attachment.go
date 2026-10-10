@@ -26,9 +26,9 @@ type Attachment struct {
 	Category       AttachmentCategory `bson:"category" json:"category"`
 	MimeType       string             `bson:"mime_type" json:"mime_type"`
 	// Content is the base64-encoded file payload (data URL body).
-	Content string    `bson:"content" json:"content"`
-	Notes   string    `bson:"notes" json:"notes"`
-	Date    time.Time `bson:"date" json:"date"`
+	Content   string    `bson:"content" json:"content"`
+	Notes     string    `bson:"notes" json:"notes"`
+	Date      time.Time `bson:"date" json:"date"`
 	CreatedAt time.Time `bson:"created_at" json:"created_at"`
 	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
 }

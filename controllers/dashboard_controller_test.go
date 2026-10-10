@@ -153,6 +153,113 @@ func TestDashboardStatsIsolatesByVet(t *testing.T) {
 	}
 }
 
+// TestDashboardStatsWindowBoundaryInclusiveness locks in the half-open vs
+// inclusive window contract that the mongo filters implement and the fakes
+// mirror: consultation and appointment windows are half-open [start, end)
+// ($gte/$lt), while the vaccine window is inclusive [start, end] ($gte/$lte).
+//
+// The existing dashboard tests only seed interior points, so the $lt-vs-$lte
+// distinction on the upper bound is never asserted. This test seeds documents
+// exactly on the window boundaries so a future regression (e.g. flipping the
+// vaccine query to $lt, or a consultation/appointment query to $lte) fails.
+func TestDashboardStatsWindowBoundaryInclusiveness(t *testing.T) {
+	// Part 1: drive the controller end-to-end for the two half-open windows.
+	// The controller derives monthStart/monthEnd and dayStart/dayEnd purely
+	// from the calendar, so we can reproduce the exact same bounds here and the
+	// assertion stays deterministic regardless of the current date.
+	t.Run("controller half-open consultation and appointment windows", func(t *testing.T) {
+		ctrl, _, _, consultationRepo, _, _, appointmentRepo := newDashboardFixture()
+		ctx := context.Background()
+		now := time.Now()
+
+		vetA := primitive.NewObjectID()
+
+		monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+		monthEnd := monthStart.AddDate(0, 1, 0)
+		dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		dayEnd := dayStart.AddDate(0, 0, 1)
+
+		// Consultations: one exactly at monthStart (included, $gte) and one
+		// exactly at monthEnd (excluded, $lt). Expected count = 1.
+		_ = consultationRepo.Create(ctx, &models.Consultation{VetID: vetA, Date: monthStart})
+		_ = consultationRepo.Create(ctx, &models.Consultation{VetID: vetA, Date: monthEnd})
+
+		// Appointments: one exactly at dayStart (included) and one exactly at
+		// dayEnd (excluded). Expected count = 1.
+		_ = appointmentRepo.Create(ctx, &models.Appointment{VetID: vetA, StartTime: dayStart})
+		_ = appointmentRepo.Create(ctx, &models.Appointment{VetID: vetA, StartTime: dayEnd})
+
+		req := withUserID(httptest.NewRequest(http.MethodGet, "/dashboard/stats", nil), vetA)
+		rec := httptest.NewRecorder()
+		ctrl.Stats(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d (body: %s)", rec.Code, http.StatusOK, rec.Body.String())
+		}
+
+		var got dashboardStats
+		if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+
+		if got.ConsultationsThisMonth != 1 {
+			t.Errorf("consultations_this_month = %d, want 1 (monthStart must count, monthEnd must not)", got.ConsultationsThisMonth)
+		}
+		if got.AppointmentsToday != 1 {
+			t.Errorf("appointments_today = %d, want 1 (dayStart must count, dayEnd must not)", got.AppointmentsToday)
+		}
+	})
+
+	// Part 2: assert the inclusiveness contract directly against the fake count
+	// methods with explicit start/end bounds. This is deterministic for the
+	// vaccine upper bound too, which the controller otherwise computes from an
+	// internal time.Now() we cannot pin without adding a seam to production
+	// code. The fakes are the exact semantics the controller depends on.
+	t.Run("fake count methods inclusive vs exclusive end", func(t *testing.T) {
+		ctx := context.Background()
+		vetA := primitive.NewObjectID()
+
+		start := time.Date(2024, time.January, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2024, time.February, 1, 0, 0, 0, 0, time.UTC)
+
+		// Vaccine: inclusive [start, end]. Seed exactly at both bounds; both count.
+		vaccineRepo := newFakeVaccineRepo()
+		_ = vaccineRepo.Create(ctx, &models.Vaccine{VetID: vetA, PetID: primitive.NewObjectID(), VaccineName: "atStart", NextDoseDate: start})
+		_ = vaccineRepo.Create(ctx, &models.Vaccine{VetID: vetA, PetID: primitive.NewObjectID(), VaccineName: "atEnd", NextDoseDate: end})
+		vaccineCount, err := vaccineRepo.CountByVetIDNextDoseInRange(ctx, vetA, start, end)
+		if err != nil {
+			t.Fatalf("vaccine count: %v", err)
+		}
+		if vaccineCount != 2 {
+			t.Errorf("vaccine count = %d, want 2 (both start and end are inclusive, $gte/$lte)", vaccineCount)
+		}
+
+		// Consultation: half-open [start, end). start counts, end does not.
+		consultationRepo := newFakeConsultationRepo()
+		_ = consultationRepo.Create(ctx, &models.Consultation{VetID: vetA, Date: start})
+		_ = consultationRepo.Create(ctx, &models.Consultation{VetID: vetA, Date: end})
+		consultationCount, err := consultationRepo.CountByVetIDInRange(ctx, vetA, start, end)
+		if err != nil {
+			t.Fatalf("consultation count: %v", err)
+		}
+		if consultationCount != 1 {
+			t.Errorf("consultation count = %d, want 1 (start inclusive, end exclusive, $gte/$lt)", consultationCount)
+		}
+
+		// Appointment: half-open [start, end). start counts, end does not.
+		appointmentRepo := newFakeAppointmentRepo()
+		_ = appointmentRepo.Create(ctx, &models.Appointment{VetID: vetA, StartTime: start})
+		_ = appointmentRepo.Create(ctx, &models.Appointment{VetID: vetA, StartTime: end})
+		appointmentCount, err := appointmentRepo.CountByVetIDInRange(ctx, vetA, start, end)
+		if err != nil {
+			t.Fatalf("appointment count: %v", err)
+		}
+		if appointmentCount != 1 {
+			t.Errorf("appointment count = %d, want 1 (start inclusive, end exclusive, $gte/$lt)", appointmentCount)
+		}
+	})
+}
+
 func TestDashboardStatsUnauthenticated(t *testing.T) {
 	ctrl, _, _, _, _, _, _ := newDashboardFixture()
 

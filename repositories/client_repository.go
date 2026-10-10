@@ -47,7 +47,7 @@ func (r *mongoClientRepository) FindAll(ctx context.Context) ([]*models.Client, 
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var clients []*models.Client
 	err = cursor.All(ctx, &clients)
@@ -63,7 +63,7 @@ func (r *mongoClientRepository) FindByVetID(ctx context.Context, vetID primitive
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer func() { _ = cursor.Close(ctx) }()
 
 	var clients []*models.Client
 	err = cursor.All(ctx, &clients)
@@ -71,6 +71,11 @@ func (r *mongoClientRepository) FindByVetID(ctx context.Context, vetID primitive
 		return nil, err
 	}
 	return clients, nil
+}
+
+// CountByVetID counts all clients for a given veterinarian without loading them.
+func (r *mongoClientRepository) CountByVetID(ctx context.Context, vetID primitive.ObjectID) (int64, error) {
+	return r.collection.CountDocuments(ctx, bson.M{"vet_id": vetID})
 }
 
 // Update updates an existing client
