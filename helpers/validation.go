@@ -34,7 +34,7 @@ func allSameDigit(digits string) bool {
 func cpfCheckDigit(digits string, n int) int {
 	sum := 0
 	weight := n + 1
-	for i := 0; i < n; i++ {
+	for i := range n {
 		sum += int(digits[i]-'0') * weight
 		weight--
 	}

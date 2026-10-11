@@ -232,7 +232,7 @@ func (c *AttachmentController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updates := map[string]interface{}{
+	updates := map[string]any{
 		"name":       body.Name,
 		"notes":      body.Notes,
 		"updated_at": time.Now(),

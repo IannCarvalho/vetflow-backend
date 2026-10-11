@@ -66,7 +66,7 @@ func (c *UserController) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	// Update user
-	user, err := c.userRepository.UpdateUser(ctx, objID, map[string]interface{}{
+	user, err := c.userRepository.UpdateUser(ctx, objID, map[string]any{
 		"name":       req.Name,
 		"email":      req.Email,
 		"updated_at": time.Now(),
@@ -79,7 +79,7 @@ func (c *UserController) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]any{
 		"user": user,
 	})
 }
@@ -126,7 +126,7 @@ func (c *UserController) UpdateProfilePicture(w http.ResponseWriter, r *http.Req
 	defer cancel()
 
 	// Update user
-	user, err := c.userRepository.UpdateUser(ctx, objID, map[string]interface{}{
+	user, err := c.userRepository.UpdateUser(ctx, objID, map[string]any{
 		"profile_picture": req.ProfilePicture,
 		"updated_at":      time.Now(),
 	})
@@ -138,7 +138,7 @@ func (c *UserController) UpdateProfilePicture(w http.ResponseWriter, r *http.Req
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]any{
 		"user": user,
 	})
 }
@@ -162,7 +162,7 @@ func (c *UserController) RemoveProfilePicture(w http.ResponseWriter, r *http.Req
 	defer cancel()
 
 	// Update user
-	user, err := c.userRepository.UpdateUser(ctx, objID, map[string]interface{}{
+	user, err := c.userRepository.UpdateUser(ctx, objID, map[string]any{
 		"profile_picture": "",
 		"updated_at":      time.Now(),
 	})
@@ -174,7 +174,7 @@ func (c *UserController) RemoveProfilePicture(w http.ResponseWriter, r *http.Req
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]any{
 		"user": user,
 	})
 }
@@ -253,7 +253,7 @@ func (c *UserController) ChangePassword(w http.ResponseWriter, r *http.Request) 
 	hashedPassword := helpers.HashPassword(req.NewPassword)
 
 	// Update user password
-	_, err = c.userRepository.UpdateUser(ctx, objID, map[string]interface{}{
+	_, err = c.userRepository.UpdateUser(ctx, objID, map[string]any{
 		"password":   hashedPassword,
 		"updated_at": time.Now(),
 	})
@@ -334,7 +334,7 @@ func (c *UserController) SetPassword(w http.ResponseWriter, r *http.Request) {
 	hashedPassword := helpers.HashPassword(req.Password)
 
 	// Update user password
-	_, err = c.userRepository.UpdateUser(ctx, objID, map[string]interface{}{
+	_, err = c.userRepository.UpdateUser(ctx, objID, map[string]any{
 		"password":   hashedPassword,
 		"updated_at": time.Now(),
 	})
