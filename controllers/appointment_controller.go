@@ -175,8 +175,7 @@ func (c *AppointmentController) GetByID(w http.ResponseWriter, r *http.Request) 
 		writeErrorWithDetails(w, http.StatusNotFound, "Agendamento não encontrado", "Nenhum agendamento com este ID existe no banco de dados", "APPOINTMENT_NOT_FOUND")
 		return
 	}
-	if err := validateResourceOwnership(appointment.VetID, userID); err != nil {
-		writeError(w, http.StatusForbidden, err.Error())
+	if !ensureOwnershipStrict(w, appointment.VetID, userID) {
 		return
 	}
 
@@ -219,8 +218,7 @@ func (c *AppointmentController) Update(w http.ResponseWriter, r *http.Request) {
 		writeErrorWithDetails(w, http.StatusNotFound, "Agendamento não encontrado", "Nenhum agendamento com este ID existe no banco de dados", "APPOINTMENT_NOT_FOUND")
 		return
 	}
-	if err := validateResourceOwnership(existing.VetID, userID); err != nil {
-		writeError(w, http.StatusForbidden, err.Error())
+	if !ensureOwnershipStrict(w, existing.VetID, userID) {
 		return
 	}
 
@@ -287,8 +285,7 @@ func (c *AppointmentController) Delete(w http.ResponseWriter, r *http.Request) {
 		writeErrorWithDetails(w, http.StatusNotFound, "Agendamento não encontrado", "Nenhum agendamento com este ID existe no banco de dados", "APPOINTMENT_NOT_FOUND")
 		return
 	}
-	if err := validateResourceOwnership(existing.VetID, userID); err != nil {
-		writeError(w, http.StatusForbidden, err.Error())
+	if !ensureOwnershipStrict(w, existing.VetID, userID) {
 		return
 	}
 

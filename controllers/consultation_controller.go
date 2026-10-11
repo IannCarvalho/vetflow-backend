@@ -162,11 +162,8 @@ func (c *ConsultationController) GetByID(w http.ResponseWriter, r *http.Request)
 
 	// Only expose consultations that belong to the authenticated vet. Legacy
 	// records with a zero VetID remain visible until re-saved.
-	if !consultation.VetID.IsZero() {
-		if err := validateResourceOwnership(consultation.VetID, userID); err != nil {
-			writeError(w, http.StatusForbidden, err.Error())
-			return
-		}
+	if !ensureOwnership(w, consultation.VetID, userID) {
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -210,11 +207,8 @@ func (c *ConsultationController) PrescriptionDraft(w http.ResponseWriter, r *htt
 	}
 	// Legacy records with a zero VetID remain accessible; otherwise block drafting
 	// from another vet's consultation.
-	if !consultation.VetID.IsZero() {
-		if err := validateResourceOwnership(consultation.VetID, userID); err != nil {
-			writeError(w, http.StatusForbidden, err.Error())
-			return
-		}
+	if !ensureOwnership(w, consultation.VetID, userID) {
+		return
 	}
 
 	draft := buildPrescriptionDraft(consultation)
@@ -287,11 +281,8 @@ func (c *ConsultationController) Update(w http.ResponseWriter, r *http.Request) 
 	}
 	// Records created before vet-scoping may have a zero VetID; allow those to
 	// be claimed, but block editing another vet's consultation.
-	if !existing.VetID.IsZero() {
-		if err := validateResourceOwnership(existing.VetID, userID); err != nil {
-			writeError(w, http.StatusForbidden, err.Error())
-			return
-		}
+	if !ensureOwnership(w, existing.VetID, userID) {
+		return
 	}
 
 	var consultation models.Consultation
@@ -358,11 +349,8 @@ func (c *ConsultationController) Delete(w http.ResponseWriter, r *http.Request) 
 	}
 	// Legacy records with a zero VetID remain deletable; otherwise block removing
 	// another vet's consultation.
-	if !existing.VetID.IsZero() {
-		if err := validateResourceOwnership(existing.VetID, userID); err != nil {
-			writeError(w, http.StatusForbidden, err.Error())
-			return
-		}
+	if !ensureOwnership(w, existing.VetID, userID) {
+		return
 	}
 
 	if err := c.repo.Delete(r.Context(), objectID); err != nil {

@@ -172,8 +172,7 @@ func (c *PrescriptionController) GetByID(w http.ResponseWriter, r *http.Request)
 		writeErrorWithDetails(w, http.StatusNotFound, "Receituário não encontrado", "Nenhum receituário com este ID existe no banco de dados", "PRESCRIPTION_NOT_FOUND")
 		return
 	}
-	if err := validateResourceOwnership(prescription.VetID, userID); err != nil {
-		writeError(w, http.StatusForbidden, err.Error())
+	if !ensureOwnershipStrict(w, prescription.VetID, userID) {
 		return
 	}
 
@@ -218,8 +217,7 @@ func (c *PrescriptionController) Print(w http.ResponseWriter, r *http.Request) {
 		writeErrorWithDetails(w, http.StatusNotFound, "Receituário não encontrado", "Nenhum receituário com este ID existe no banco de dados", "PRESCRIPTION_NOT_FOUND")
 		return
 	}
-	if err := validateResourceOwnership(prescription.VetID, userID); err != nil {
-		writeError(w, http.StatusForbidden, err.Error())
+	if !ensureOwnershipStrict(w, prescription.VetID, userID) {
 		return
 	}
 
@@ -306,8 +304,7 @@ func (c *PrescriptionController) Update(w http.ResponseWriter, r *http.Request) 
 		writeErrorWithDetails(w, http.StatusNotFound, "Receituário não encontrado", "Nenhum receituário com este ID existe no banco de dados", "PRESCRIPTION_NOT_FOUND")
 		return
 	}
-	if err := validateResourceOwnership(existing.VetID, userID); err != nil {
-		writeError(w, http.StatusForbidden, err.Error())
+	if !ensureOwnershipStrict(w, existing.VetID, userID) {
 		return
 	}
 
@@ -376,8 +373,7 @@ func (c *PrescriptionController) Delete(w http.ResponseWriter, r *http.Request) 
 		writeErrorWithDetails(w, http.StatusNotFound, "Receituário não encontrado", "Nenhum receituário com este ID existe no banco de dados", "PRESCRIPTION_NOT_FOUND")
 		return
 	}
-	if err := validateResourceOwnership(existing.VetID, userID); err != nil {
-		writeError(w, http.StatusForbidden, err.Error())
+	if !ensureOwnershipStrict(w, existing.VetID, userID) {
 		return
 	}
 

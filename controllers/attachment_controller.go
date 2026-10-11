@@ -172,8 +172,7 @@ func (c *AttachmentController) GetContent(w http.ResponseWriter, r *http.Request
 		writeErrorWithDetails(w, http.StatusNotFound, "Anexo não encontrado", "Nenhum anexo com este ID existe no banco de dados", "ATTACHMENT_NOT_FOUND")
 		return
 	}
-	if err := validateResourceOwnership(attachment.VetID, userID); err != nil {
-		writeError(w, http.StatusForbidden, err.Error())
+	if !ensureOwnershipStrict(w, attachment.VetID, userID) {
 		return
 	}
 
@@ -215,8 +214,7 @@ func (c *AttachmentController) Update(w http.ResponseWriter, r *http.Request) {
 		writeErrorWithDetails(w, http.StatusNotFound, "Anexo não encontrado", "Nenhum anexo com este ID existe no banco de dados", "ATTACHMENT_NOT_FOUND")
 		return
 	}
-	if err := validateResourceOwnership(existing.VetID, userID); err != nil {
-		writeError(w, http.StatusForbidden, err.Error())
+	if !ensureOwnershipStrict(w, existing.VetID, userID) {
 		return
 	}
 
@@ -289,8 +287,7 @@ func (c *AttachmentController) Delete(w http.ResponseWriter, r *http.Request) {
 		writeErrorWithDetails(w, http.StatusNotFound, "Anexo não encontrado", "Nenhum anexo com este ID existe no banco de dados", "ATTACHMENT_NOT_FOUND")
 		return
 	}
-	if err := validateResourceOwnership(existing.VetID, userID); err != nil {
-		writeError(w, http.StatusForbidden, err.Error())
+	if !ensureOwnershipStrict(w, existing.VetID, userID) {
 		return
 	}
 
