@@ -24,7 +24,7 @@ type UserRepository interface {
 	FindByID(ctx context.Context, id string) (*models.User, error)
 	FindByObjectID(ctx context.Context, id primitive.ObjectID) (*models.User, error)
 	FindAll(ctx context.Context) ([]*models.User, error)
-	UpdateUser(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) (*models.User, error)
+	UpdateUser(ctx context.Context, id primitive.ObjectID, updates map[string]any) (*models.User, error)
 }
 
 // UserRepositoryImpl implements UserRepository
@@ -121,7 +121,7 @@ func (r *UserRepositoryImpl) FindByObjectID(ctx context.Context, id primitive.Ob
 }
 
 // UpdateUser updates a user with the provided updates
-func (r *UserRepositoryImpl) UpdateUser(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) (*models.User, error) {
+func (r *UserRepositoryImpl) UpdateUser(ctx context.Context, id primitive.ObjectID, updates map[string]any) (*models.User, error) {
 	updateDoc := bson.M{"$set": updates}
 	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
 

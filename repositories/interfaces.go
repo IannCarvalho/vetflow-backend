@@ -77,7 +77,7 @@ type AttachmentRepository interface {
 	// FindSummariesByPetID lists attachments for a pet WITHOUT the heavy base64
 	// content, so listings stay lightweight.
 	FindSummariesByPetID(ctx context.Context, petID primitive.ObjectID) ([]*models.AttachmentSummary, error)
-	Update(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) error
+	Update(ctx context.Context, id primitive.ObjectID, updates map[string]any) error
 	Delete(ctx context.Context, id primitive.ObjectID) error
 	DeleteByPetID(ctx context.Context, petID primitive.ObjectID) error
 }

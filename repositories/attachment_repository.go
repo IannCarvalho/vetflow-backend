@@ -63,7 +63,7 @@ func (r *mongoAttachmentRepository) FindSummariesByPetID(ctx context.Context, pe
 }
 
 // Update applies partial updates to an attachment (used for metadata edits).
-func (r *mongoAttachmentRepository) Update(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) error {
+func (r *mongoAttachmentRepository) Update(ctx context.Context, id primitive.ObjectID, updates map[string]any) error {
 	result, err := r.collection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": updates})
 	if err != nil {
 		return err

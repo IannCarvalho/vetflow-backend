@@ -39,9 +39,9 @@ type AuthResponse struct {
 
 // SocialLoginRequest is the request body for social authentication
 type SocialLoginRequest struct {
-	Provider string                 `json:"provider"`
-	Token    string                 `json:"token,omitempty"`
-	UserData map[string]interface{} `json:"userData"`
+	Provider string         `json:"provider"`
+	Token    string         `json:"token,omitempty"`
+	UserData map[string]any `json:"userData"`
 }
 
 // Validate performs validation on RegisterRequest
