@@ -104,6 +104,9 @@ type fakeClientRepo struct {
 	// findByIDErr, when set, is returned by FindByID instead of a lookup result,
 	// letting tests exercise the DB-error branch of verifyClientOwnership.
 	findByIDErr error
+	// countErr, when set, is returned by CountByVetID instead of a count,
+	// letting the dashboard tests exercise the per-count error path.
+	countErr error
 }
 
 var _ repositories.ClientRepository = (*fakeClientRepo)(nil)
@@ -154,6 +157,9 @@ func (r *fakeClientRepo) FindByVetID(_ context.Context, vetID primitive.ObjectID
 }
 
 func (r *fakeClientRepo) CountByVetID(_ context.Context, vetID primitive.ObjectID) (int64, error) {
+	if r.countErr != nil {
+		return 0, r.countErr
+	}
 	var count int64
 	for _, c := range r.items {
 		if c.VetID == vetID {
@@ -188,6 +194,8 @@ type fakePetRepo struct {
 	// clients lets FindByVetID resolve a pet's owning client to the vet scope,
 	// mirroring the aggregation $lookup in the mongo pet repository.
 	clients *fakeClientRepo
+	// countErr, when set, is returned by CountByVetID instead of a count.
+	countErr error
 }
 
 var _ repositories.PetRepository = (*fakePetRepo)(nil)
@@ -261,6 +269,9 @@ func (r *fakePetRepo) FindByVetID(_ context.Context, vetID primitive.ObjectID) (
 }
 
 func (r *fakePetRepo) CountByVetID(_ context.Context, vetID primitive.ObjectID) (int64, error) {
+	if r.countErr != nil {
+		return 0, r.countErr
+	}
 	var count int64
 	for _, p := range r.items {
 		if r.clients == nil {
@@ -305,6 +316,8 @@ func (r *fakePetRepo) DeleteByClientID(_ context.Context, clientID primitive.Obj
 
 type fakeVaccineRepo struct {
 	items map[primitive.ObjectID]*models.Vaccine
+	// countErr, when set, is returned by CountByVetIDNextDoseInRange instead of a count.
+	countErr error
 }
 
 var _ repositories.VaccineRepository = (*fakeVaccineRepo)(nil)
@@ -365,6 +378,9 @@ func (r *fakeVaccineRepo) FindByVetID(_ context.Context, vetID primitive.ObjectI
 // CountByVetIDNextDoseInRange mirrors the mongo INCLUSIVE [start, end] semantics
 // ($gte start, $lte end), matching the original !Before(now) && !After(windowEnd).
 func (r *fakeVaccineRepo) CountByVetIDNextDoseInRange(_ context.Context, vetID primitive.ObjectID, start, end time.Time) (int64, error) {
+	if r.countErr != nil {
+		return 0, r.countErr
+	}
 	var count int64
 	for _, v := range r.items {
 		next := v.NextDoseDate
@@ -406,6 +422,8 @@ func (r *fakeVaccineRepo) DeleteByPetID(_ context.Context, petID primitive.Objec
 
 type fakeConsultationRepo struct {
 	items map[primitive.ObjectID]*models.Consultation
+	// countErr, when set, is returned by CountByVetIDInRange instead of a count.
+	countErr error
 }
 
 var _ repositories.ConsultationRepository = (*fakeConsultationRepo)(nil)
@@ -462,6 +480,9 @@ func (r *fakeConsultationRepo) FindByVetID(_ context.Context, vetID primitive.Ob
 // CountByVetIDInRange mirrors the mongo half-open [start, end) semantics
 // ($gte start, $lt end).
 func (r *fakeConsultationRepo) CountByVetIDInRange(_ context.Context, vetID primitive.ObjectID, start, end time.Time) (int64, error) {
+	if r.countErr != nil {
+		return 0, r.countErr
+	}
 	var count int64
 	for _, c := range r.items {
 		if c.VetID == vetID && !c.Date.Before(start) && c.Date.Before(end) {
@@ -628,6 +649,8 @@ func (r *fakeCatalogItemRepo) Delete(_ context.Context, id primitive.ObjectID) e
 
 type fakeInvoiceRepo struct {
 	items map[primitive.ObjectID]*models.Invoice
+	// countErr, when set, is returned by CountByVetIDAndStatus instead of a count.
+	countErr error
 }
 
 var _ repositories.InvoiceRepository = (*fakeInvoiceRepo)(nil)
@@ -673,6 +696,9 @@ func (r *fakeInvoiceRepo) FindByClientID(_ context.Context, clientID primitive.O
 	return out, nil
 }
 func (r *fakeInvoiceRepo) CountByVetIDAndStatus(_ context.Context, vetID primitive.ObjectID, status models.PaymentStatus) (int64, error) {
+	if r.countErr != nil {
+		return 0, r.countErr
+	}
 	var count int64
 	for _, inv := range r.items {
 		if inv.VetID == vetID && inv.Status == status {
@@ -711,6 +737,8 @@ func (r *fakeInvoiceRepo) DeleteByClientID(_ context.Context, clientID primitive
 
 type fakeAppointmentRepo struct {
 	items map[primitive.ObjectID]*models.Appointment
+	// countErr, when set, is returned by CountByVetIDInRange instead of a count.
+	countErr error
 }
 
 var _ repositories.AppointmentRepository = (*fakeAppointmentRepo)(nil)
@@ -759,6 +787,9 @@ func (r *fakeAppointmentRepo) FindByVetIDInRange(_ context.Context, vetID primit
 // CountByVetIDInRange mirrors the mongo half-open [start, end) semantics
 // ($gte start, $lt end).
 func (r *fakeAppointmentRepo) CountByVetIDInRange(_ context.Context, vetID primitive.ObjectID, start, end time.Time) (int64, error) {
+	if r.countErr != nil {
+		return 0, r.countErr
+	}
 	var count int64
 	for _, a := range r.items {
 		if a.VetID == vetID && !a.StartTime.Before(start) && a.StartTime.Before(end) {

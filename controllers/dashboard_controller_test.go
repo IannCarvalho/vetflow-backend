@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -270,5 +271,119 @@ func TestDashboardStatsUnauthenticated(t *testing.T) {
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+}
+
+// TestDashboardStatsDistinctCounts seeds a different number of documents in each
+// of the six collections and asserts every field lands on its own count. With
+// the counts now gathered concurrently via errgroup, a goroutine that wrote the
+// wrong dedicated variable (a copy/paste bug) would surface here as a crossed
+// value, which uniform counts could hide.
+func TestDashboardStatsDistinctCounts(t *testing.T) {
+	ctrl, clientRepo, petRepo, consultationRepo, vaccineRepo, invoiceRepo, appointmentRepo := newDashboardFixture()
+	ctx := context.Background()
+	now := time.Now()
+	vetA := primitive.NewObjectID()
+
+	// 1 client, 2 pets, 3 consultations this month, 4 upcoming vaccines,
+	// 5 pending invoices, 6 appointments today — all distinct so a crossed
+	// assignment cannot pass.
+	c1 := &models.Client{VetID: vetA, FullName: "C1"}
+	_ = clientRepo.Create(ctx, c1)
+
+	for i := 0; i < 2; i++ {
+		_ = petRepo.Create(ctx, &models.Pet{OwnerID: c1.ID, Name: "P"})
+	}
+	for i := 0; i < 3; i++ {
+		_ = consultationRepo.Create(ctx, &models.Consultation{VetID: vetA, Date: now})
+	}
+	for i := 0; i < 4; i++ {
+		_ = vaccineRepo.Create(ctx, &models.Vaccine{VetID: vetA, PetID: primitive.NewObjectID(), VaccineName: "V", NextDoseDate: now.AddDate(0, 0, 5)})
+	}
+	for i := 0; i < 5; i++ {
+		_ = invoiceRepo.Create(ctx, &models.Invoice{VetID: vetA, Status: models.PaymentPending})
+	}
+	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	for i := 0; i < 6; i++ {
+		_ = appointmentRepo.Create(ctx, &models.Appointment{VetID: vetA, StartTime: startOfToday.Add(time.Duration(i+1) * time.Hour)})
+	}
+
+	req := withUserID(httptest.NewRequest(http.MethodGet, "/dashboard/stats", nil), vetA)
+	rec := httptest.NewRecorder()
+	ctrl.Stats(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d (body: %s)", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	var got dashboardStats
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+
+	want := dashboardStats{
+		TotalClients:           1,
+		TotalPets:              2,
+		ConsultationsThisMonth: 3,
+		UpcomingVaccinations:   4,
+		PendingInvoices:        5,
+		AppointmentsToday:      6,
+	}
+	if got != want {
+		t.Fatalf("stats = %+v, want %+v (a goroutine wrote the wrong dedicated var)", got, want)
+	}
+}
+
+// TestDashboardStatsPreservesPerCountErrorMessage proves the errgroup
+// parallelization preserves the count-specific 500 message. g.Wait() returns
+// only the first error, so each count wraps its failure in a *countError
+// carrying its own message; the handler unwraps it. Each sub-test forces
+// exactly one repo's count to fail and asserts the body still names that count
+// (a vaccine failure must read "Falha ao recuperar vacinas"), with the original
+// error under details and the "DB_QUERY_ERROR" code — byte-for-byte what the
+// old sequential handler produced.
+func TestDashboardStatsPreservesPerCountErrorMessage(t *testing.T) {
+	boom := errors.New("mongo: connection refused")
+
+	cases := []struct {
+		name        string
+		inject      func(*fakeClientRepo, *fakePetRepo, *fakeConsultationRepo, *fakeVaccineRepo, *fakeInvoiceRepo, *fakeAppointmentRepo)
+		wantMessage string
+	}{
+		{"clients", func(cl *fakeClientRepo, _ *fakePetRepo, _ *fakeConsultationRepo, _ *fakeVaccineRepo, _ *fakeInvoiceRepo, _ *fakeAppointmentRepo) { cl.countErr = boom }, "Falha ao recuperar clientes"},
+		{"pets", func(_ *fakeClientRepo, p *fakePetRepo, _ *fakeConsultationRepo, _ *fakeVaccineRepo, _ *fakeInvoiceRepo, _ *fakeAppointmentRepo) { p.countErr = boom }, "Falha ao recuperar pets"},
+		{"consultations", func(_ *fakeClientRepo, _ *fakePetRepo, co *fakeConsultationRepo, _ *fakeVaccineRepo, _ *fakeInvoiceRepo, _ *fakeAppointmentRepo) { co.countErr = boom }, "Falha ao recuperar consultas"},
+		{"vaccines", func(_ *fakeClientRepo, _ *fakePetRepo, _ *fakeConsultationRepo, v *fakeVaccineRepo, _ *fakeInvoiceRepo, _ *fakeAppointmentRepo) { v.countErr = boom }, "Falha ao recuperar vacinas"},
+		{"invoices", func(_ *fakeClientRepo, _ *fakePetRepo, _ *fakeConsultationRepo, _ *fakeVaccineRepo, inv *fakeInvoiceRepo, _ *fakeAppointmentRepo) { inv.countErr = boom }, "Falha ao recuperar faturas"},
+		{"appointments", func(_ *fakeClientRepo, _ *fakePetRepo, _ *fakeConsultationRepo, _ *fakeVaccineRepo, _ *fakeInvoiceRepo, a *fakeAppointmentRepo) { a.countErr = boom }, "Falha ao recuperar agendamentos"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl, clientRepo, petRepo, consultationRepo, vaccineRepo, invoiceRepo, appointmentRepo := newDashboardFixture()
+			tc.inject(clientRepo, petRepo, consultationRepo, vaccineRepo, invoiceRepo, appointmentRepo)
+
+			req := withUserID(httptest.NewRequest(http.MethodGet, "/dashboard/stats", nil), primitive.NewObjectID())
+			rec := httptest.NewRecorder()
+			ctrl.Stats(rec, req)
+
+			if rec.Code != http.StatusInternalServerError {
+				t.Fatalf("status = %d, want %d (body: %s)", rec.Code, http.StatusInternalServerError, rec.Body.String())
+			}
+
+			var body errorResponse
+			if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+				t.Fatalf("decode body: %v", err)
+			}
+			if body.Error != tc.wantMessage {
+				t.Errorf("error message = %q, want %q", body.Error, tc.wantMessage)
+			}
+			if body.Details != boom.Error() {
+				t.Errorf("details = %q, want %q (original error must survive)", body.Details, boom.Error())
+			}
+			if body.Code != "DB_QUERY_ERROR" {
+				t.Errorf("code = %q, want %q", body.Code, "DB_QUERY_ERROR")
+			}
+		})
 	}
 }
