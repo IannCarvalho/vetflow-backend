@@ -149,14 +149,9 @@ func (c *VaccineController) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vaccine, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar vacina", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-
-	if vaccine == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Vacina não encontrada", "Nenhuma vacina com este ID existe no banco de dados", "VACCINE_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	vaccine, ok := resolveFound(w, found, err, "Falha ao recuperar vacina", "Vacina não encontrada", "Nenhuma vacina com este ID existe no banco de dados", "VACCINE_NOT_FOUND")
+	if !ok {
 		return
 	}
 
@@ -194,14 +189,9 @@ func (c *VaccineController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar vacina", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-
-	if existing == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Vacina não encontrada", "Nenhuma vacina com este ID existe no banco de dados", "VACCINE_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	existing, ok := resolveFound(w, found, err, "Falha ao recuperar vacina", "Vacina não encontrada", "Nenhuma vacina com este ID existe no banco de dados", "VACCINE_NOT_FOUND")
+	if !ok {
 		return
 	}
 
@@ -262,14 +252,9 @@ func (c *VaccineController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar vacina", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-
-	if existing == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Vacina não encontrada", "Nenhuma vacina com este ID existe no banco de dados", "VACCINE_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	existing, ok := resolveFound(w, found, err, "Falha ao recuperar vacina", "Vacina não encontrada", "Nenhuma vacina com este ID existe no banco de dados", "VACCINE_NOT_FOUND")
+	if !ok {
 		return
 	}
 

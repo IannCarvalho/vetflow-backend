@@ -166,13 +166,9 @@ func (c *AppointmentController) GetByID(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	appointment, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar agendamento", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if appointment == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Agendamento não encontrado", "Nenhum agendamento com este ID existe no banco de dados", "APPOINTMENT_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	appointment, ok := resolveFound(w, found, err, "Falha ao recuperar agendamento", "Agendamento não encontrado", "Nenhum agendamento com este ID existe no banco de dados", "APPOINTMENT_NOT_FOUND")
+	if !ok {
 		return
 	}
 	if !ensureOwnershipStrict(w, appointment.VetID, userID) {
@@ -209,13 +205,9 @@ func (c *AppointmentController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure the appointment exists and belongs to the vet
-	existing, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar agendamento", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if existing == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Agendamento não encontrado", "Nenhum agendamento com este ID existe no banco de dados", "APPOINTMENT_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	existing, ok := resolveFound(w, found, err, "Falha ao recuperar agendamento", "Agendamento não encontrado", "Nenhum agendamento com este ID existe no banco de dados", "APPOINTMENT_NOT_FOUND")
+	if !ok {
 		return
 	}
 	if !ensureOwnershipStrict(w, existing.VetID, userID) {
@@ -276,13 +268,9 @@ func (c *AppointmentController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar agendamento", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if existing == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Agendamento não encontrado", "Nenhum agendamento com este ID existe no banco de dados", "APPOINTMENT_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	existing, ok := resolveFound(w, found, err, "Falha ao recuperar agendamento", "Agendamento não encontrado", "Nenhum agendamento com este ID existe no banco de dados", "APPOINTMENT_NOT_FOUND")
+	if !ok {
 		return
 	}
 	if !ensureOwnershipStrict(w, existing.VetID, userID) {

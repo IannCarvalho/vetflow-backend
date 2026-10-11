@@ -163,13 +163,9 @@ func (c *PrescriptionController) GetByID(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	prescription, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar receituário", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if prescription == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Receituário não encontrado", "Nenhum receituário com este ID existe no banco de dados", "PRESCRIPTION_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	prescription, ok := resolveFound(w, found, err, "Falha ao recuperar receituário", "Receituário não encontrado", "Nenhum receituário com este ID existe no banco de dados", "PRESCRIPTION_NOT_FOUND")
+	if !ok {
 		return
 	}
 	if !ensureOwnershipStrict(w, prescription.VetID, userID) {
@@ -208,13 +204,9 @@ func (c *PrescriptionController) Print(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	prescription, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar receituário", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if prescription == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Receituário não encontrado", "Nenhum receituário com este ID existe no banco de dados", "PRESCRIPTION_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	prescription, ok := resolveFound(w, found, err, "Falha ao recuperar receituário", "Receituário não encontrado", "Nenhum receituário com este ID existe no banco de dados", "PRESCRIPTION_NOT_FOUND")
+	if !ok {
 		return
 	}
 	if !ensureOwnershipStrict(w, prescription.VetID, userID) {
@@ -295,13 +287,9 @@ func (c *PrescriptionController) Update(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	existing, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar receituário", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if existing == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Receituário não encontrado", "Nenhum receituário com este ID existe no banco de dados", "PRESCRIPTION_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	existing, ok := resolveFound(w, found, err, "Falha ao recuperar receituário", "Receituário não encontrado", "Nenhum receituário com este ID existe no banco de dados", "PRESCRIPTION_NOT_FOUND")
+	if !ok {
 		return
 	}
 	if !ensureOwnershipStrict(w, existing.VetID, userID) {
@@ -364,13 +352,9 @@ func (c *PrescriptionController) Delete(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	existing, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar receituário", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if existing == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Receituário não encontrado", "Nenhum receituário com este ID existe no banco de dados", "PRESCRIPTION_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	existing, ok := resolveFound(w, found, err, "Falha ao recuperar receituário", "Receituário não encontrado", "Nenhum receituário com este ID existe no banco de dados", "PRESCRIPTION_NOT_FOUND")
+	if !ok {
 		return
 	}
 	if !ensureOwnershipStrict(w, existing.VetID, userID) {

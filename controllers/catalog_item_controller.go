@@ -134,13 +134,9 @@ func (c *CatalogItemController) GetByID(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	item, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar item", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if item == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Item não encontrado", "Nenhum item com este ID existe no banco de dados", "CATALOG_ITEM_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	item, ok := resolveFound(w, found, err, "Falha ao recuperar item", "Item não encontrado", "Nenhum item com este ID existe no banco de dados", "CATALOG_ITEM_NOT_FOUND")
+	if !ok {
 		return
 	}
 	if !ensureOwnershipStrict(w, item.VetID, userID) {
@@ -176,13 +172,9 @@ func (c *CatalogItemController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar item", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if existing == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Item não encontrado", "Nenhum item com este ID existe no banco de dados", "CATALOG_ITEM_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	existing, ok := resolveFound(w, found, err, "Falha ao recuperar item", "Item não encontrado", "Nenhum item com este ID existe no banco de dados", "CATALOG_ITEM_NOT_FOUND")
+	if !ok {
 		return
 	}
 	if !ensureOwnershipStrict(w, existing.VetID, userID) {
@@ -243,13 +235,9 @@ func (c *CatalogItemController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar item", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if existing == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Item não encontrado", "Nenhum item com este ID existe no banco de dados", "CATALOG_ITEM_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	existing, ok := resolveFound(w, found, err, "Falha ao recuperar item", "Item não encontrado", "Nenhum item com este ID existe no banco de dados", "CATALOG_ITEM_NOT_FOUND")
+	if !ok {
 		return
 	}
 	if !ensureOwnershipStrict(w, existing.VetID, userID) {

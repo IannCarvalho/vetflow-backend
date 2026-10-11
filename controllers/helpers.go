@@ -48,6 +48,46 @@ func parseObjectIDParam(w http.ResponseWriter, r *http.Request, param, label, co
 	return objectID, true
 }
 
+// resolveFound collapses the FindByID -> 500 -> nil-check -> 404 preamble that
+// precedes the ownership guard in every by-ID read/update/delete handler. The
+// caller passes the (*T, error) pair a repository FindByID already returned, so
+// no model or repository abstraction is touched and Go generics let one helper
+// serve *Invoice, *Appointment, *Vaccine, ... alike:
+//
+//	res, err := c.repo.FindByID(r.Context(), objectID)
+//	existing, ok := resolveFound(w, res, err,
+//	    "Falha ao recuperar fatura",
+//	    "Fatura não encontrada",
+//	    "Nenhuma fatura com este ID existe no banco de dados",
+//	    "INVOICE_NOT_FOUND")
+//	if !ok {
+//	    return
+//	}
+//
+// Byte-for-byte preservation is the whole point, so the three per-resource texts
+// and the not-found code are parameters: queryErrorMessage is the exact 500
+// message that site used ("Falha ao recuperar <recurso>"), and notFoundMessage /
+// notFoundDetails / notFoundCode are the exact 404 message, details and code.
+// The two invariants of this preamble stay fixed inside the helper and are NOT
+// parameters, because they never varied across the ~26 converted sites: the 500
+// always carries the underlying err.Error() as its details under the
+// "DB_QUERY_ERROR" code. On err != nil it writes that standard 500 and returns
+// (nil, false); on resource == nil it writes the 404 and returns (nil, false);
+// otherwise it returns (resource, true) and the caller proceeds to its own
+// ownership check (ensureOwnership / ensureOwnershipStrict / validateResourceOwnership),
+// which is deliberately left untouched here.
+func resolveFound[T any](w http.ResponseWriter, resource *T, err error, queryErrorMessage, notFoundMessage, notFoundDetails, notFoundCode string) (*T, bool) {
+	if err != nil {
+		writeErrorWithDetails(w, http.StatusInternalServerError, queryErrorMessage, err.Error(), "DB_QUERY_ERROR")
+		return nil, false
+	}
+	if resource == nil {
+		writeErrorWithDetails(w, http.StatusNotFound, notFoundMessage, notFoundDetails, notFoundCode)
+		return nil, false
+	}
+	return resource, true
+}
+
 // errValidation returns a validation error
 func errValidation(message string) error {
 	return errors.New(message)
