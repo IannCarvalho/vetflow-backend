@@ -142,13 +142,9 @@ func (c *InvoiceController) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	invoice, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar fatura", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if invoice == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Fatura não encontrada", "Nenhuma fatura com este ID existe no banco de dados", "INVOICE_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	invoice, ok := resolveFound(w, found, err, "Falha ao recuperar fatura", "Fatura não encontrada", "Nenhuma fatura com este ID existe no banco de dados", "INVOICE_NOT_FOUND")
+	if !ok {
 		return
 	}
 	if !ensureOwnershipStrict(w, invoice.VetID, userID) {
@@ -184,13 +180,9 @@ func (c *InvoiceController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar fatura", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if existing == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Fatura não encontrada", "Nenhuma fatura com este ID existe no banco de dados", "INVOICE_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	existing, ok := resolveFound(w, found, err, "Falha ao recuperar fatura", "Fatura não encontrada", "Nenhuma fatura com este ID existe no banco de dados", "INVOICE_NOT_FOUND")
+	if !ok {
 		return
 	}
 	if !ensureOwnershipStrict(w, existing.VetID, userID) {
@@ -259,13 +251,9 @@ func (c *InvoiceController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar fatura", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if existing == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Fatura não encontrada", "Nenhuma fatura com este ID existe no banco de dados", "INVOICE_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	existing, ok := resolveFound(w, found, err, "Falha ao recuperar fatura", "Fatura não encontrada", "Nenhuma fatura com este ID existe no banco de dados", "INVOICE_NOT_FOUND")
+	if !ok {
 		return
 	}
 	if !ensureOwnershipStrict(w, existing.VetID, userID) {

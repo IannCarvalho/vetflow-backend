@@ -149,14 +149,9 @@ func (c *ConsultationController) GetByID(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	consultation, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar consulta", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-
-	if consultation == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Consulta não encontrada", "Nenhuma consulta com este ID existe no banco de dados", "CONSULTATION_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	consultation, ok := resolveFound(w, found, err, "Falha ao recuperar consulta", "Consulta não encontrada", "Nenhuma consulta com este ID existe no banco de dados", "CONSULTATION_NOT_FOUND")
+	if !ok {
 		return
 	}
 
@@ -196,13 +191,9 @@ func (c *ConsultationController) PrescriptionDraft(w http.ResponseWriter, r *htt
 		return
 	}
 
-	consultation, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar consulta", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if consultation == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Consulta não encontrada", "Nenhuma consulta com este ID existe no banco de dados", "CONSULTATION_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	consultation, ok := resolveFound(w, found, err, "Falha ao recuperar consulta", "Consulta não encontrada", "Nenhuma consulta com este ID existe no banco de dados", "CONSULTATION_NOT_FOUND")
+	if !ok {
 		return
 	}
 	// Legacy records with a zero VetID remain accessible; otherwise block drafting
@@ -270,13 +261,9 @@ func (c *ConsultationController) Update(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Ensure the consultation exists and belongs to the authenticated vet.
-	existing, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar consulta", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if existing == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Consulta não encontrada", "Nenhuma consulta com este ID existe no banco de dados", "CONSULTATION_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	existing, ok := resolveFound(w, found, err, "Falha ao recuperar consulta", "Consulta não encontrada", "Nenhuma consulta com este ID existe no banco de dados", "CONSULTATION_NOT_FOUND")
+	if !ok {
 		return
 	}
 	// Records created before vet-scoping may have a zero VetID; allow those to
@@ -338,13 +325,9 @@ func (c *ConsultationController) Delete(w http.ResponseWriter, r *http.Request) 
 
 	// Ensure the consultation exists and belongs to the authenticated vet before
 	// deleting, mirroring GetByID/Update.
-	existing, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar consulta", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if existing == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Consulta não encontrada", "Nenhuma consulta com este ID existe no banco de dados", "CONSULTATION_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	existing, ok := resolveFound(w, found, err, "Falha ao recuperar consulta", "Consulta não encontrada", "Nenhuma consulta com este ID existe no banco de dados", "CONSULTATION_NOT_FOUND")
+	if !ok {
 		return
 	}
 	// Legacy records with a zero VetID remain deletable; otherwise block removing

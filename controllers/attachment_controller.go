@@ -163,13 +163,9 @@ func (c *AttachmentController) GetContent(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	attachment, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar anexo", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if attachment == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Anexo não encontrado", "Nenhum anexo com este ID existe no banco de dados", "ATTACHMENT_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	attachment, ok := resolveFound(w, found, err, "Falha ao recuperar anexo", "Anexo não encontrado", "Nenhum anexo com este ID existe no banco de dados", "ATTACHMENT_NOT_FOUND")
+	if !ok {
 		return
 	}
 	if !ensureOwnershipStrict(w, attachment.VetID, userID) {
@@ -205,13 +201,9 @@ func (c *AttachmentController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar anexo", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if existing == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Anexo não encontrado", "Nenhum anexo com este ID existe no banco de dados", "ATTACHMENT_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	existing, ok := resolveFound(w, found, err, "Falha ao recuperar anexo", "Anexo não encontrado", "Nenhum anexo com este ID existe no banco de dados", "ATTACHMENT_NOT_FOUND")
+	if !ok {
 		return
 	}
 	if !ensureOwnershipStrict(w, existing.VetID, userID) {
@@ -278,13 +270,9 @@ func (c *AttachmentController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar anexo", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-	if existing == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Anexo não encontrado", "Nenhum anexo com este ID existe no banco de dados", "ATTACHMENT_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	existing, ok := resolveFound(w, found, err, "Falha ao recuperar anexo", "Anexo não encontrado", "Nenhum anexo com este ID existe no banco de dados", "ATTACHMENT_NOT_FOUND")
+	if !ok {
 		return
 	}
 	if !ensureOwnershipStrict(w, existing.VetID, userID) {

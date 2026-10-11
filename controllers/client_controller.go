@@ -113,14 +113,9 @@ func (c *ClientController) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar cliente", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-
-	if client == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Cliente não encontrado", "Nenhum cliente com este ID existe no banco de dados", "CLIENT_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	client, ok := resolveFound(w, found, err, "Falha ao recuperar cliente", "Cliente não encontrado", "Nenhum cliente com este ID existe no banco de dados", "CLIENT_NOT_FOUND")
+	if !ok {
 		return
 	}
 
@@ -189,14 +184,9 @@ func (c *ClientController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existingClient, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar cliente", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-
-	if existingClient == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Cliente não encontrado", "Nenhum cliente com este ID existe no banco de dados", "CLIENT_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	existingClient, ok := resolveFound(w, found, err, "Falha ao recuperar cliente", "Cliente não encontrado", "Nenhum cliente com este ID existe no banco de dados", "CLIENT_NOT_FOUND")
+	if !ok {
 		return
 	}
 
@@ -258,14 +248,9 @@ func (c *ClientController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existingClient, err := c.repo.FindByID(r.Context(), objectID)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao recuperar cliente", err.Error(), "DB_QUERY_ERROR")
-		return
-	}
-
-	if existingClient == nil {
-		writeErrorWithDetails(w, http.StatusNotFound, "Cliente não encontrado", "Nenhum cliente com este ID existe no banco de dados", "CLIENT_NOT_FOUND")
+	found, err := c.repo.FindByID(r.Context(), objectID)
+	existingClient, ok := resolveFound(w, found, err, "Falha ao recuperar cliente", "Cliente não encontrado", "Nenhum cliente com este ID existe no banco de dados", "CLIENT_NOT_FOUND")
+	if !ok {
 		return
 	}
 
