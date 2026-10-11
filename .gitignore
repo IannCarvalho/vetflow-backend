@@ -45,3 +45,11 @@ dist/
 
 # Workflow/agent task metadata (not source)
 .agents/
+
+# Agent skills tooling (installed via `npx skills`, not project source).
+# The agent/ subtree ships example .go files that break `go build ./...`,
+# so it must never be tracked or walked by the module.
+agent/
+.claude/
+.kiro/
+skills-lock.json
