@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/vetflow/veterinary-api/models"
 	"github.com/vetflow/veterinary-api/repositories"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -138,9 +137,8 @@ func (c *InvoiceController) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	objectID, err := parseInvoiceIDParam(r, "id")
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de fatura inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID de fatura", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -182,9 +180,8 @@ func (c *InvoiceController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	objectID, err := parseInvoiceIDParam(r, "id")
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de fatura inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID de fatura", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -259,9 +256,8 @@ func (c *InvoiceController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	objectID, err := parseInvoiceIDParam(r, "id")
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de fatura inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID de fatura", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -292,10 +288,6 @@ func (c *InvoiceController) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 // --- helpers ---
-
-func parseInvoiceIDParam(r *http.Request, name string) (primitive.ObjectID, error) {
-	return primitive.ObjectIDFromHex(chi.URLParam(r, name))
-}
 
 func writeInvoices(w http.ResponseWriter, invoices []*models.Invoice) {
 	if invoices == nil {

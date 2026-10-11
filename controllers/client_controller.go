@@ -6,11 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/vetflow/veterinary-api/helpers"
 	"github.com/vetflow/veterinary-api/models"
 	"github.com/vetflow/veterinary-api/repositories"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -110,10 +108,8 @@ func (c *ClientController) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := chi.URLParam(r, "id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de cliente inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID de cliente", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -188,10 +184,8 @@ func (c *ClientController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := chi.URLParam(r, "id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de cliente inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID de cliente", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -259,10 +253,8 @@ func (c *ClientController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := chi.URLParam(r, "id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de cliente inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID de cliente", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 

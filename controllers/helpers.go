@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/vetflow/veterinary-api/internal/ctxkeys"
 	"github.com/vetflow/veterinary-api/models"
 	"github.com/vetflow/veterinary-api/repositories"
@@ -31,6 +32,20 @@ func writeErrorWithDetails(w http.ResponseWriter, statusCode int, message, detai
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	_ = json.NewEncoder(w).Encode(errorResponse{Error: message, Details: details, Code: code})
+}
+
+// parseObjectIDParam reads a chi URL param, parses it as a Mongo ObjectID, and
+// on failure writes the standard INVALID_ID_FORMAT 400 response and returns
+// ok=false. The label is interpolated into the user-facing message ("Formato de
+// "+label+" inválido") and code is the error code, so each call site keeps its
+// exact existing message and code (the API contract is unchanged).
+func parseObjectIDParam(w http.ResponseWriter, r *http.Request, param, label, code string) (primitive.ObjectID, bool) {
+	objectID, err := primitive.ObjectIDFromHex(chi.URLParam(r, param))
+	if err != nil {
+		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de "+label+" inválido", "Esperado um ObjectID válido do MongoDB", code)
+		return primitive.ObjectID{}, false
+	}
+	return objectID, true
 }
 
 // errValidation returns a validation error

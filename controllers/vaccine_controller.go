@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/vetflow/veterinary-api/models"
 	"github.com/vetflow/veterinary-api/repositories"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -145,10 +144,8 @@ func (c *VaccineController) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := chi.URLParam(r, "id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de vacina inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID de vacina", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -192,10 +189,8 @@ func (c *VaccineController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := chi.URLParam(r, "id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de vacina inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID de vacina", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -262,10 +257,8 @@ func (c *VaccineController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := chi.URLParam(r, "id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de vacina inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID de vacina", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 

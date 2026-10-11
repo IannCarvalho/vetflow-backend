@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/vetflow/veterinary-api/models"
 	"github.com/vetflow/veterinary-api/repositories"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -159,9 +158,8 @@ func (c *PrescriptionController) GetByID(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	objectID, err := parsePrescriptionIDParam(r, "id")
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de receituário inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID de receituário", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -206,9 +204,8 @@ func (c *PrescriptionController) Print(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	objectID, err := parsePrescriptionIDParam(r, "id")
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de receituário inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID de receituário", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -295,9 +292,8 @@ func (c *PrescriptionController) Update(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	objectID, err := parsePrescriptionIDParam(r, "id")
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de receituário inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID de receituário", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -366,9 +362,8 @@ func (c *PrescriptionController) Delete(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	objectID, err := parsePrescriptionIDParam(r, "id")
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de receituário inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID de receituário", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -399,10 +394,6 @@ func (c *PrescriptionController) Delete(w http.ResponseWriter, r *http.Request) 
 }
 
 // --- helpers ---
-
-func parsePrescriptionIDParam(r *http.Request, name string) (primitive.ObjectID, error) {
-	return primitive.ObjectIDFromHex(chi.URLParam(r, name))
-}
 
 func writePrescriptions(w http.ResponseWriter, prescriptions []*models.Prescription) {
 	if prescriptions == nil {

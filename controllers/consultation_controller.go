@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/vetflow/veterinary-api/models"
 	"github.com/vetflow/veterinary-api/repositories"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -145,10 +144,8 @@ func (c *ConsultationController) GetByID(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	id := chi.URLParam(r, "id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de consulta inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID de consulta", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -197,9 +194,8 @@ func (c *ConsultationController) PrescriptionDraft(w http.ResponseWriter, r *htt
 		return
 	}
 
-	objectID, err := primitive.ObjectIDFromHex(chi.URLParam(r, "id"))
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de consulta inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID de consulta", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -274,10 +270,8 @@ func (c *ConsultationController) Update(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	id := chi.URLParam(r, "id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de consulta inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID de consulta", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -346,10 +340,8 @@ func (c *ConsultationController) Delete(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	id := chi.URLParam(r, "id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID de consulta inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID de consulta", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 

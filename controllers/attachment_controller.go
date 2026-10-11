@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/vetflow/veterinary-api/models"
 	"github.com/vetflow/veterinary-api/repositories"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -159,9 +158,8 @@ func (c *AttachmentController) GetContent(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	objectID, err := parseAttachmentIDParam(r, "id")
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -203,9 +201,8 @@ func (c *AttachmentController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	objectID, err := parseAttachmentIDParam(r, "id")
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -278,9 +275,8 @@ func (c *AttachmentController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	objectID, err := parseAttachmentIDParam(r, "id")
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -311,10 +307,6 @@ func (c *AttachmentController) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 // --- helpers ---
-
-func parseAttachmentIDParam(r *http.Request, name string) (primitive.ObjectID, error) {
-	return primitive.ObjectIDFromHex(chi.URLParam(r, name))
-}
 
 // assertPetOwnership confirms the pet exists and its owning client belongs to
 // the authenticated vet. Pet ownership is derived through the owning client's
