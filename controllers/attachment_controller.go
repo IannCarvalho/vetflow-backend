@@ -326,7 +326,7 @@ func writeAttachmentOwnershipError(w http.ResponseWriter, err error) {
 	case errAttachmentPetNotFound:
 		writeErrorWithDetails(w, http.StatusNotFound, "Pet não encontrado", "Nenhum pet com este ID existe no banco de dados", "PET_NOT_FOUND")
 	case errAttachmentForbidden:
-		writeError(w, http.StatusForbidden, "acesso negado: você não tem permissão para acessar este recurso")
+		writeErrorWithDetails(w, http.StatusForbidden, "Acesso negado", "acesso negado: você não tem permissão para acessar este recurso", "ACCESS_DENIED")
 	default:
 		writeErrorWithDetails(w, http.StatusInternalServerError, "Falha ao verificar propriedade do pet", err.Error(), "DB_QUERY_ERROR")
 	}

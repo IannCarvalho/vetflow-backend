@@ -137,9 +137,14 @@ func validateResourceOwnership(resourceOwnerID, userID primitive.ObjectID) error
 // carry verbatim:
 //
 //	if err := validateResourceOwnership(resource.VetID, userID); err != nil {
-//	    writeError(w, http.StatusForbidden, err.Error())
+//	    writeErrorWithDetails(w, http.StatusForbidden, "Acesso negado", err.Error(), "ACCESS_DENIED")
 //	    return
 //	}
+//
+// Being the single ownership-403 site, it emits the uniform rich error shape —
+// error "Acesso negado", details carrying validateResourceOwnership's message
+// ("acesso negado: você não tem permissão para acessar este recurso") and code
+// "ACCESS_DENIED" — so every VetID-scoped controller returns the same 403 body.
 //
 // It has NO IsZero() early return: a zero resourceVetID is NOT treated as
 // owned. Legacy records with a zero VetID predate vet-scoping, belong to no
@@ -148,7 +153,7 @@ func validateResourceOwnership(resourceOwnerID, userID primitive.ObjectID) error
 // uniformly for every resource.
 func ensureOwnershipStrict(w http.ResponseWriter, resourceVetID, userID primitive.ObjectID) bool {
 	if err := validateResourceOwnership(resourceVetID, userID); err != nil {
-		writeError(w, http.StatusForbidden, err.Error())
+		writeErrorWithDetails(w, http.StatusForbidden, "Acesso negado", err.Error(), "ACCESS_DENIED")
 		return false
 	}
 	return true
@@ -169,15 +174,17 @@ var (
 
 // writeClientOwnershipError maps a verifyClientOwnership error to the HTTP
 // response used by the read/update/delete style handlers: 404 "Client not
-// found", 403 "Access denied", and 500 "Failed to verify client ownership" for
-// an underlying repository failure. Handlers whose not-found case differs
+// found", a 403 in the uniform ownership shape (error "Acesso negado",
+// details "acesso negado: você não tem permissão para acessar este recurso",
+// code "ACCESS_DENIED"), and 500 "Failed to verify client ownership" for an
+// underlying repository failure. Handlers whose not-found case differs
 // (e.g. pet Create returns 400) should inspect the sentinels directly instead.
 func writeClientOwnershipError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, errClientNotFound):
 		writeError(w, http.StatusNotFound, "Client not found")
 	case errors.Is(err, errClientAccessDenied):
-		writeError(w, http.StatusForbidden, "Access denied")
+		writeErrorWithDetails(w, http.StatusForbidden, "Acesso negado", "acesso negado: você não tem permissão para acessar este recurso", "ACCESS_DENIED")
 	default:
 		writeError(w, http.StatusInternalServerError, "Failed to verify client ownership")
 	}

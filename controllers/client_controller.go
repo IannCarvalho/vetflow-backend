@@ -119,8 +119,7 @@ func (c *ClientController) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validateResourceOwnership(client.VetID, userID); err != nil {
-		writeErrorWithDetails(w, http.StatusForbidden, "Acesso negado", err.Error(), "ACCESS_DENIED")
+	if !ensureOwnershipStrict(w, client.VetID, userID) {
 		return
 	}
 
@@ -190,8 +189,7 @@ func (c *ClientController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validateResourceOwnership(existingClient.VetID, userID); err != nil {
-		writeErrorWithDetails(w, http.StatusForbidden, "Acesso negado", err.Error(), "ACCESS_DENIED")
+	if !ensureOwnershipStrict(w, existingClient.VetID, userID) {
 		return
 	}
 
@@ -254,8 +252,7 @@ func (c *ClientController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validateResourceOwnership(existingClient.VetID, userID); err != nil {
-		writeErrorWithDetails(w, http.StatusForbidden, "Acesso negado", err.Error(), "ACCESS_DENIED")
+	if !ensureOwnershipStrict(w, existingClient.VetID, userID) {
 		return
 	}
 

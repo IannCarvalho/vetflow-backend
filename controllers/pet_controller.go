@@ -81,7 +81,7 @@ func (c *PetController) Create(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, errClientNotFound):
 			writeError(w, http.StatusBadRequest, "Client not found")
 		case errors.Is(err, errClientAccessDenied):
-			writeError(w, http.StatusForbidden, "You do not have permission to add pets to this client")
+			writeErrorWithDetails(w, http.StatusForbidden, "Acesso negado", "acesso negado: você não tem permissão para acessar este recurso", "ACCESS_DENIED")
 		default:
 			writeError(w, http.StatusInternalServerError, "Failed to verify client ownership")
 		}

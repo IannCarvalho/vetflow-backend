@@ -155,8 +155,7 @@ func (c *VaccineController) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validateResourceOwnership(vaccine.VetID, userID); err != nil {
-		writeErrorWithDetails(w, http.StatusForbidden, "Acesso negado", err.Error(), "ACCESS_DENIED")
+	if !ensureOwnershipStrict(w, vaccine.VetID, userID) {
 		return
 	}
 
@@ -195,8 +194,7 @@ func (c *VaccineController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validateResourceOwnership(existing.VetID, userID); err != nil {
-		writeErrorWithDetails(w, http.StatusForbidden, "Acesso negado", err.Error(), "ACCESS_DENIED")
+	if !ensureOwnershipStrict(w, existing.VetID, userID) {
 		return
 	}
 
@@ -258,8 +256,7 @@ func (c *VaccineController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validateResourceOwnership(existing.VetID, userID); err != nil {
-		writeErrorWithDetails(w, http.StatusForbidden, "Acesso negado", err.Error(), "ACCESS_DENIED")
+	if !ensureOwnershipStrict(w, existing.VetID, userID) {
 		return
 	}
 
