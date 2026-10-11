@@ -47,9 +47,13 @@ dist/
 .agents/
 
 # Agent skills tooling (installed via `npx skills`, not project source).
-# The agent/ subtree ships example .go files that break `go build ./...`,
-# so it must never be tracked or walked by the module.
-agent/
+# The agent/ subtree ships example .go files that import packages absent from
+# go.mod, which break `go build ./...` and `go mod tidy` at the repo root.
+# The whole tree is ignored EXCEPT agent/go.mod: that nested module is a
+# deliberate boundary that makes the Go toolchain stop descending into agent/
+# from the root module's ./... wildcard. Keep it tracked so the fix survives.
+agent/*
+!agent/go.mod
 .claude/
 .kiro/
 skills-lock.json
