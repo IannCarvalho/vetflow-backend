@@ -117,6 +117,33 @@ func ensureOwnership(w http.ResponseWriter, resourceVetID, userID primitive.Obje
 	return true
 }
 
+// ensureOwnershipStrict enforces that a resource already loaded by the caller
+// belongs to the authenticated veterinarian, writing the standard 403 response
+// and returning ok=false when it does not. It is the unconditional sibling of
+// ensureOwnership and exists to deduplicate the block that the client-facing
+// resource handlers (appointment, invoice, prescription, attachment,
+// catalog_item) carry verbatim:
+//
+//	if err := validateResourceOwnership(resource.VetID, userID); err != nil {
+//	    writeError(w, http.StatusForbidden, err.Error())
+//	    return
+//	}
+//
+// Unlike ensureOwnership, it has NO IsZero() early return: a zero resourceVetID
+// is NOT treated as owned. These handlers never had the `if !VetID.IsZero()`
+// guard, so a record with a zero VetID currently fails validateResourceOwnership
+// against a non-zero userID and yields a 403. Preserving that 403 is the whole
+// point of this strict variant — swapping these sites to ensureOwnership would
+// silently make legacy zero-VetID records accessible, a behavior change. Use
+// ensureOwnership only where the IsZero-is-owned semantics already applied.
+func ensureOwnershipStrict(w http.ResponseWriter, resourceVetID, userID primitive.ObjectID) bool {
+	if err := validateResourceOwnership(resourceVetID, userID); err != nil {
+		writeError(w, http.StatusForbidden, err.Error())
+		return false
+	}
+	return true
+}
+
 // Sentinel errors returned by verifyClientOwnership so callers can map each
 // failure mode to the exact HTTP status code and message they already use.
 // (The not-found case, for example, is a 400 in pet Create but a 404 in the

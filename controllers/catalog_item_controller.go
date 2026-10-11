@@ -143,8 +143,7 @@ func (c *CatalogItemController) GetByID(w http.ResponseWriter, r *http.Request) 
 		writeErrorWithDetails(w, http.StatusNotFound, "Item não encontrado", "Nenhum item com este ID existe no banco de dados", "CATALOG_ITEM_NOT_FOUND")
 		return
 	}
-	if err := validateResourceOwnership(item.VetID, userID); err != nil {
-		writeError(w, http.StatusForbidden, err.Error())
+	if !ensureOwnershipStrict(w, item.VetID, userID) {
 		return
 	}
 
@@ -186,8 +185,7 @@ func (c *CatalogItemController) Update(w http.ResponseWriter, r *http.Request) {
 		writeErrorWithDetails(w, http.StatusNotFound, "Item não encontrado", "Nenhum item com este ID existe no banco de dados", "CATALOG_ITEM_NOT_FOUND")
 		return
 	}
-	if err := validateResourceOwnership(existing.VetID, userID); err != nil {
-		writeError(w, http.StatusForbidden, err.Error())
+	if !ensureOwnershipStrict(w, existing.VetID, userID) {
 		return
 	}
 
@@ -254,8 +252,7 @@ func (c *CatalogItemController) Delete(w http.ResponseWriter, r *http.Request) {
 		writeErrorWithDetails(w, http.StatusNotFound, "Item não encontrado", "Nenhum item com este ID existe no banco de dados", "CATALOG_ITEM_NOT_FOUND")
 		return
 	}
-	if err := validateResourceOwnership(existing.VetID, userID); err != nil {
-		writeError(w, http.StatusForbidden, err.Error())
+	if !ensureOwnershipStrict(w, existing.VetID, userID) {
 		return
 	}
 
