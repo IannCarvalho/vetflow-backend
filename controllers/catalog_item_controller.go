@@ -5,10 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/vetflow/veterinary-api/models"
 	"github.com/vetflow/veterinary-api/repositories"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -131,9 +129,8 @@ func (c *CatalogItemController) GetByID(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	objectID, err := parseCatalogIDParam(r, "id")
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -175,9 +172,8 @@ func (c *CatalogItemController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	objectID, err := parseCatalogIDParam(r, "id")
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -244,9 +240,8 @@ func (c *CatalogItemController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	objectID, err := parseCatalogIDParam(r, "id")
-	if err != nil {
-		writeErrorWithDetails(w, http.StatusBadRequest, "Formato de ID inválido", "Esperado um ObjectID válido do MongoDB", "INVALID_ID_FORMAT")
+	objectID, ok := parseObjectIDParam(w, r, "id", "ID", "INVALID_ID_FORMAT")
+	if !ok {
 		return
 	}
 
@@ -277,10 +272,6 @@ func (c *CatalogItemController) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 // --- helpers ---
-
-func parseCatalogIDParam(r *http.Request, name string) (primitive.ObjectID, error) {
-	return primitive.ObjectIDFromHex(chi.URLParam(r, name))
-}
 
 // normalizeCatalogItem applies defaults and clears stock for services.
 func normalizeCatalogItem(item *models.CatalogItem) {
