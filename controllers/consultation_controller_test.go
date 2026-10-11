@@ -100,6 +100,32 @@ func TestConsultationGetByIDOtherVetForbidden(t *testing.T) {
 	}
 }
 
+// TestConsultationGetByIDZeroVetIDForbidden pins the APPROVED behavior change:
+// a legacy consultation whose VetID is zero (predates vet-scoping, belongs to
+// no vet) is NOT accessible and must return 403, uniformly with every other
+// resource. The consultation handlers previously used ensureOwnership, whose
+// IsZero() early return granted access to such records; they now use
+// ensureOwnershipStrict, which blocks them.
+func TestConsultationGetByIDZeroVetIDForbidden(t *testing.T) {
+	repo := newFakeConsultationRepo()
+	ctrl := NewConsultationController(repo)
+
+	vet := primitive.NewObjectID()
+	// VetID left zero on purpose: a legacy, unowned record.
+	legacy := &models.Consultation{PetID: primitive.NewObjectID()}
+	_ = repo.Create(context.Background(), legacy)
+
+	req := httptest.NewRequest(http.MethodGet, "/consultations/"+legacy.ID.Hex(), nil)
+	req = withIDParam(req, legacy.ID, vet)
+	rec := httptest.NewRecorder()
+
+	ctrl.GetByID(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d (zero-VetID legacy record must be blocked)", rec.Code, http.StatusForbidden)
+	}
+}
+
 func TestConsultationUpdateOtherVetForbidden(t *testing.T) {
 	repo := newFakeConsultationRepo()
 	ctrl := NewConsultationController(repo)

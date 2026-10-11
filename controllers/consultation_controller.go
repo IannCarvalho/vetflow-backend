@@ -156,8 +156,9 @@ func (c *ConsultationController) GetByID(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Only expose consultations that belong to the authenticated vet. Legacy
-	// records with a zero VetID remain visible until re-saved.
-	if !ensureOwnership(w, consultation.VetID, userID) {
+	// records with a zero VetID are NOT owned by anyone and are blocked with 403,
+	// uniformly with every other resource.
+	if !ensureOwnershipStrict(w, consultation.VetID, userID) {
 		return
 	}
 
@@ -196,9 +197,9 @@ func (c *ConsultationController) PrescriptionDraft(w http.ResponseWriter, r *htt
 	if !ok {
 		return
 	}
-	// Legacy records with a zero VetID remain accessible; otherwise block drafting
-	// from another vet's consultation.
-	if !ensureOwnership(w, consultation.VetID, userID) {
+	// Zero-VetID legacy records are not owned by anyone and are blocked with 403;
+	// otherwise block drafting from another vet's consultation.
+	if !ensureOwnershipStrict(w, consultation.VetID, userID) {
 		return
 	}
 
@@ -266,9 +267,9 @@ func (c *ConsultationController) Update(w http.ResponseWriter, r *http.Request) 
 	if !ok {
 		return
 	}
-	// Records created before vet-scoping may have a zero VetID; allow those to
-	// be claimed, but block editing another vet's consultation.
-	if !ensureOwnership(w, existing.VetID, userID) {
+	// Zero-VetID legacy records are not owned by anyone and are blocked with 403,
+	// as is editing another vet's consultation.
+	if !ensureOwnershipStrict(w, existing.VetID, userID) {
 		return
 	}
 
@@ -330,9 +331,9 @@ func (c *ConsultationController) Delete(w http.ResponseWriter, r *http.Request) 
 	if !ok {
 		return
 	}
-	// Legacy records with a zero VetID remain deletable; otherwise block removing
-	// another vet's consultation.
-	if !ensureOwnership(w, existing.VetID, userID) {
+	// Zero-VetID legacy records are not owned by anyone and are blocked with 403,
+	// as is removing another vet's consultation.
+	if !ensureOwnershipStrict(w, existing.VetID, userID) {
 		return
 	}
 
