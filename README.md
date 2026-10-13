@@ -6,6 +6,15 @@ A production-ready REST API for managing veterinary clinics, built with **Go** a
 > This is the backend of the [VetFlow monorepo](../README.md). For the web client, see
 > [`vetflow-frontend`](../vetflow-frontend/README.md).
 
+> **Note — no LiteLLM here.** This backend is written in **Go** and never imports
+> `litellm`; the LLM lives entirely in the
+> [`vetflow-agent`](../vetflow-agent) (Python) service. The agent's
+> import-ordering rule — import `litellm` right after loading the env, and at
+> module top-level, because LiteLLM reads environment variables at **import
+> time** — is documented in the agent's README and does **not** apply to this
+> repo. Cross-referenced here only so the detail isn't looked for in the wrong
+> place.
+
 ---
 
 ## Table of Contents
