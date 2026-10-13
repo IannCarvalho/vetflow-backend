@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"net/mail"
 	"strings"
 	"unicode"
 )
@@ -61,17 +60,6 @@ func IsValidCPF(cpf string) bool {
 	}
 	dv2 := cpfCheckDigit(digits, 10)
 	return dv2 == int(digits[10]-'0')
-}
-
-// IsValidEmail reports whether email is a syntactically valid address. It uses
-// net/mail.ParseAddress and only accepts a bare address, rejecting forms with a
-// display name such as "Nome <a@b.com>".
-func IsValidEmail(email string) bool {
-	addr, err := mail.ParseAddress(email)
-	if err != nil {
-		return false
-	}
-	return addr.Address == strings.TrimSpace(email)
 }
 
 // IsValidBRPhone reports whether phone is a valid Brazilian phone number,
