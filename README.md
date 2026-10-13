@@ -3,12 +3,12 @@
 A production-ready REST API for managing veterinary clinics, built with **Go** and
 **MongoDB**, following SOLID principles and an MVC-style architecture.
 
-> This is the backend of the [VetFlow monorepo](../README.md). For the web client, see
-> [`vetflow-frontend`](../vetflow-frontend/README.md).
+> This is the backend of the [VetFlow monorepo](https://github.com/IannCarvalho/vetflow). For the web client, see
+> [`vetflow-frontend`](https://github.com/IannCarvalho/vetflow-frontend).
 
 > **Note — no LiteLLM here.** This backend is written in **Go** and never imports
 > `litellm`; the LLM lives entirely in the
-> [`vetflow-agent`](../vetflow-agent) (Python) service. The agent's
+> [`vetflow-agent`](https://github.com/IannCarvalho/vetflow-agent) (Python) service. The agent's
 > import-ordering rule — import `litellm` right after loading the env, and at
 > module top-level, because LiteLLM reads environment variables at **import
 > time** — is documented in the agent's README and does **not** apply to this
@@ -70,6 +70,65 @@ helpers/       → Shared utilities (JWT, images, passwords, email, validation)
 ```
 
 Request flow: `routes` → `controllers` → `repositories`/`services` → `models` → MongoDB (`db`).
+
+```mermaid
+flowchart TD
+    client(["HTTP client<br/>(frontend · vetflow-mcp)"])
+
+    subgraph boot["Bootstrap — cmd/"]
+        wiring["main.go<br/>DI wiring · server start"]
+    end
+
+    subgraph http["HTTP layer"]
+        router["routes/<br/>chi router"]
+        mw["middleware<br/>JWT auth · rate limiter"]
+        ctrl["controllers/<br/>HTTP handlers · bind + validate"]
+    end
+
+    subgraph domain["Domain layer"]
+        repo["repositories/<br/>interfaces + Mongo impl"]
+        svc["services/<br/>business logic"]
+        models["models/<br/>structs · validation"]
+    end
+
+    subgraph infra["Infra"]
+        db["db/<br/>connection · indexes · seed"]
+        mongo[("MongoDB")]
+        smtp["SMTP email scheduler<br/>(services/ · async)"]
+    end
+
+    helpers["helpers/<br/>JWT · images · passwords · email · validation"]
+
+    client -->|"request"| router
+    router --> mw
+    mw --> ctrl
+    ctrl --> repo
+    ctrl --> svc
+    repo --> models
+    svc --> models
+    svc -.-> repo
+    repo --> db
+    db --> mongo
+    svc -. "daily reminders" .-> smtp
+    smtp -. "sends email" .-> client
+
+    wiring -. "injects deps into" .-> ctrl
+    wiring -. "starts" .-> svc
+    mw -. "uses" .-> helpers
+    ctrl -. "uses" .-> helpers
+
+    classDef go fill:#2f855a,stroke:#1c4532,color:#fff;
+    classDef store fill:#2b6cb0,stroke:#1a365d,color:#fff;
+    classDef ext fill:#b7791f,stroke:#744210,color:#fff;
+    class wiring,router,mw,ctrl,repo,svc,models,db,helpers go;
+    class mongo store;
+    class client,smtp ext;
+```
+
+Each arrow crosses one layer boundary only: controllers never touch Mongo
+directly (they go through repositories), and the domain layer never parses HTTP.
+Dependencies are wired in `cmd/` and injected downward, so each layer depends on
+the **interface** of the one below it — the core of the testable, SOLID design.
 
 ---
 
