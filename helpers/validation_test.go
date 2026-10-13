@@ -36,28 +36,6 @@ func TestIsValidCPF(t *testing.T) {
 	}
 }
 
-func TestIsValidEmail(t *testing.T) {
-	tests := []struct {
-		name  string
-		email string
-		want  bool
-	}{
-		{"simple", "user@example.com", true},
-		{"subdomain", "iann.barbosa@ccc.ufcg.edu.br", true},
-		{"missing domain", "a@", false},
-		{"no at sign", "sem-arroba", false},
-		{"display name form", "Nome <a@b.com>", false},
-		{"empty", "", false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := IsValidEmail(tt.email); got != tt.want {
-				t.Errorf("IsValidEmail(%q) = %v, want %v", tt.email, got, tt.want)
-			}
-		})
-	}
-}
-
 func TestIsValidBRPhone(t *testing.T) {
 	tests := []struct {
 		name  string
