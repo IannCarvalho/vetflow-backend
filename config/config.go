@@ -29,10 +29,24 @@ type Config struct {
 	EmailNotificationsEnabled bool
 }
 
+// ProductionDBName is the MongoDB database that holds real customer data. A
+// non-production environment (demo/development) must never point MONGO_DB at
+// this database, otherwise demo seeding and visitor logins would run against
+// live records. The guard in Validate enforces this.
+const ProductionDBName = "vetflow"
+
 // IsProduction reports whether the app is running in a production environment.
 func (c *Config) IsProduction() bool {
 	env := strings.ToLower(c.AppEnv)
 	return env == "production" || env == "prod"
+}
+
+// IsDemo reports whether the app is running as a public demo. Demo mode runs
+// the exact same code as production, but against a throwaway database with
+// fake data (seeded on boot) and a well-known visitor login — so it must stay
+// isolated from the production database.
+func (c *Config) IsDemo() bool {
+	return strings.ToLower(c.AppEnv) == "demo"
 }
 
 // LoadConfig loads configuration from environment variables
@@ -72,6 +86,19 @@ func (c *Config) Validate() error {
 	if c.JWTSecret == "" {
 		return fmt.Errorf("JWT_SECRET must be set (APP_ENV=%s); refusing to start without a signing secret", c.AppEnv)
 	}
+
+	// Isolation guard: a non-production environment must not point at the
+	// production database. Demo seeding drops/recreates collections and
+	// inserts accounts with a well-known password, so letting a demo or
+	// development instance target the live "vetflow" database would corrupt
+	// or expose real customer data. Fail closed at startup instead.
+	if !c.IsProduction() && strings.EqualFold(c.MongoDB, ProductionDBName) {
+		return fmt.Errorf(
+			"refusing to start: APP_ENV=%s is non-production but MONGO_DB=%q is the production database; set MONGO_DB to a separate database (e.g. %q_demo)",
+			c.AppEnv, c.MongoDB, ProductionDBName,
+		)
+	}
+
 	return nil
 }
 
