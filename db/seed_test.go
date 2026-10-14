@@ -4,7 +4,20 @@ import (
 	"testing"
 )
 
-// TestResetDemoDatabaseRefusesInProduction verifies the most important safety
+// TestMaybeResetDemoOnBootNoopOutsideDemo verifies that reset-on-boot does
+// nothing unless APP_ENV is exactly "demo". The mode guard runs before any
+// database access, so a nil *mongo.Database must not panic for non-demo envs —
+// which protects production and local development from an accidental wipe.
+func TestMaybeResetDemoOnBootNoopOutsideDemo(t *testing.T) {
+	for _, env := range []string{"production", "prod", "development", "", "staging"} {
+		t.Run(env, func(t *testing.T) {
+			t.Setenv("APP_ENV", env)
+			// Must return without touching db (nil); a panic here fails the test.
+			MaybeResetDemoOnBoot(nil)
+		})
+	}
+}
+
 // property of the demo-reset path: it must NEVER drop/re-seed a production
 // database. The production guard runs before any database access, so we can
 // assert it with a nil *mongo.Database — if the guard ever regressed, the call
