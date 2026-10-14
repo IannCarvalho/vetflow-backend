@@ -164,6 +164,48 @@ func TestConfig_Validate_DevelopmentWithJWTSecretOK(t *testing.T) {
 	}
 }
 
+func TestConfig_Validate_NonProductionRejectsProductionDB(t *testing.T) {
+	// A demo/development env pointed at the production database must fail to
+	// start, so the demo can never write to real customer data.
+	for _, env := range []string{"demo", "development", "staging"} {
+		cfg := &Config{AppEnv: env, JWTSecret: "secret", MongoDB: ProductionDBName}
+		if err := cfg.Validate(); err == nil {
+			t.Fatalf("expected Validate() to fail for APP_ENV=%s with MONGO_DB=%q", env, ProductionDBName)
+		}
+	}
+}
+
+func TestConfig_Validate_NonProductionWithSeparateDBOK(t *testing.T) {
+	cfg := &Config{AppEnv: "demo", JWTSecret: "secret", MongoDB: "vetflow_demo"}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected Validate() to pass for demo env with a separate DB, got %v", err)
+	}
+}
+
+func TestConfig_Validate_ProductionMayUseProductionDB(t *testing.T) {
+	// Production is of course allowed to use the production database.
+	cfg := &Config{AppEnv: "production", JWTSecret: "secret", MongoDB: ProductionDBName}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected Validate() to pass for production with production DB, got %v", err)
+	}
+}
+
+func TestConfig_IsDemo(t *testing.T) {
+	cases := map[string]bool{
+		"demo":        true,
+		"DEMO":        true,
+		"production":  false,
+		"development": false,
+		"":            false,
+	}
+	for env, want := range cases {
+		cfg := &Config{AppEnv: env}
+		if got := cfg.IsDemo(); got != want {
+			t.Errorf("IsDemo(%q) = %v, want %v", env, got, want)
+		}
+	}
+}
+
 func TestConfig_IsProduction(t *testing.T) {
 	cases := map[string]bool{
 		"production":  true,
