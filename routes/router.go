@@ -2,6 +2,7 @@ package routes
 
 import (
 	"context"
+	"crypto/subtle"
 	"net/http"
 	"os"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 	"github.com/go-chi/cors"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"github.com/vetflow/veterinary-api/controllers"
+	db2 "github.com/vetflow/veterinary-api/db"
 	_ "github.com/vetflow/veterinary-api/docs"
 	"github.com/vetflow/veterinary-api/repositories"
 	"github.com/vetflow/veterinary-api/services"
@@ -94,6 +96,50 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 		}
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
+
+	// Demo reset: wipes and re-seeds the demo database so a public demo can be
+	// reset on a schedule (e.g. a nightly cron), discarding anything visitors
+	// created. Protected by THREE independent layers so it can never touch a
+	// real deployment:
+	//   1. APP_ENV must be non-production (production returns 404 — the route
+	//      behaves as if it does not exist, leaking nothing).
+	//   2. ADMIN_RESET_TOKEN must be set AND match the X-Admin-Token header,
+	//      compared in constant time to avoid timing oracles.
+	//   3. db.ResetDemoDatabase applies the same production guard internally.
+	r.Post("/admin/reset-demo", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		appEnv := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
+		if appEnv == "production" || appEnv == "prod" {
+			// Pretend the route does not exist in production.
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte(`{"error":"not found"}`))
+			return
+		}
+
+		expected := strings.TrimSpace(os.Getenv("ADMIN_RESET_TOKEN"))
+		if expected == "" {
+			w.WriteHeader(http.StatusForbidden)
+			_, _ = w.Write([]byte(`{"error":"reset endpoint disabled (ADMIN_RESET_TOKEN not set)"}`))
+			return
+		}
+
+		provided := strings.TrimSpace(r.Header.Get("X-Admin-Token"))
+		if subtle.ConstantTimeCompare([]byte(provided), []byte(expected)) != 1 {
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`{"error":"invalid admin token"}`))
+			return
+		}
+
+		if err := db2.ResetDemoDatabase(db); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"error":"reset failed"}`))
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"demo database reset"}`))
 	})
 
 	// Rate limiter for the credential endpoints. AUTH_RATE_LIMIT_PER_MIN sets the

@@ -27,6 +27,13 @@ type Config struct {
 
 	// Daily notification scheduler.
 	EmailNotificationsEnabled bool
+
+	// AdminResetToken, when set, enables the POST /admin/reset-demo endpoint,
+	// which wipes and re-seeds the demo database. Callers must present this
+	// value in the X-Admin-Token header. It is only honored outside
+	// production (the handler and the seed layer both refuse in prod). Leave
+	// it empty in production so the endpoint stays disabled.
+	AdminResetToken string
 }
 
 // ProductionDBName is the MongoDB database that holds real customer data. A
@@ -69,6 +76,8 @@ func LoadConfig() *Config {
 		FromName: getEnv("SMTP_FROM_NAME", "VetFlow"),
 
 		EmailNotificationsEnabled: getEnv("EMAIL_NOTIFICATIONS_ENABLED", "true") == "true",
+
+		AdminResetToken: os.Getenv("ADMIN_RESET_TOKEN"),
 	}
 
 	log.Printf("Config loaded - MONGO_URI: %s (len=%d), PORT: %s, APP_ENV: %s, SMTP configured: %t, email notifications: %t",

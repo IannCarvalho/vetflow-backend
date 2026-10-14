@@ -78,6 +78,45 @@ func SeedDatabase(db *mongo.Database) error {
 	return nil
 }
 
+// ResetDemoDatabase wipes the demo database and re-seeds it from scratch,
+// reusing the exact same seed data as a fresh boot. It exists so a public demo
+// can be reset on a schedule, discarding anything visitors created and
+// restoring a clean, coherent dataset — without a redeploy.
+//
+// It applies the SAME production guard as SeedDatabase: it refuses to run when
+// APP_ENV is production/prod, because dropping all collections and inserting
+// fixed demo accounts against a live database would destroy real data and open
+// a credential backdoor. The HTTP route that calls this is additionally gated
+// by APP_ENV and an admin token, so there are two independent layers.
+func ResetDemoDatabase(db *mongo.Database) error {
+	appEnv := strings.ToLower(os.Getenv("APP_ENV"))
+	if appEnv == "production" || appEnv == "prod" {
+		log.Println("Refusing to reset database in production environment (APP_ENV=" + appEnv + ")")
+		return fmt.Errorf("reset refused: APP_ENV=%s is a production environment", appEnv)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Drop everything, then re-insert the canonical seed data. Index creation
+	// is idempotent, so re-ensure the unique email index after the wipe.
+	if err := clearCollections(ctx, db); err != nil {
+		return fmt.Errorf("failed to clear collections: %w", err)
+	}
+	log.Println("Demo reset -> all collections dropped, re-seeding")
+
+	if err := createUserEmailIndex(ctx, db); err != nil {
+		log.Printf("Warning: Failed to re-create email index after reset: %v", err)
+	}
+
+	if err := seedTestData(ctx, db); err != nil {
+		return fmt.Errorf("failed to re-seed test data: %w", err)
+	}
+
+	log.Println("Demo database reset and re-seeded successfully")
+	return nil
+}
+
 // clearCollections drops all seeded collections.
 func clearCollections(ctx context.Context, db *mongo.Database) error {
 	collections := []string{
