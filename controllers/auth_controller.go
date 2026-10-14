@@ -14,11 +14,12 @@ import (
 // AuthController handles authentication operations
 type AuthController struct {
 	userRepo repositories.UserRepository
+	policy   *RegistrationPolicy
 }
 
 // NewAuthController creates a new auth controller
-func NewAuthController(userRepo repositories.UserRepository) *AuthController {
-	return &AuthController{userRepo: userRepo}
+func NewAuthController(userRepo repositories.UserRepository, policy *RegistrationPolicy) *AuthController {
+	return &AuthController{userRepo: userRepo, policy: policy}
 }
 
 // Register godoc
@@ -44,6 +45,18 @@ func (c *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 	// Validate request
 	if err := req.Validate(); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Production gate: in production, new-account creation is controlled —
+	// a valid invite code is required and the account cap is enforced. In
+	// demo/development both checks are no-ops (open signup).
+	if pErr := c.policy.CheckInviteCode(req.InviteCode); pErr != nil {
+		writeError(w, pErr.status, pErr.message)
+		return
+	}
+	if pErr := c.policy.CheckCapacity(r.Context()); pErr != nil {
+		writeError(w, pErr.status, pErr.message)
 		return
 	}
 

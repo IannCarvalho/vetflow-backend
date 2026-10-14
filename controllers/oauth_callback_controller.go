@@ -13,12 +13,14 @@ import (
 // OAuthCallbackController handles OAuth callbacks from providers
 type OAuthCallbackController struct {
 	userRepo repositories.UserRepository
+	policy   *RegistrationPolicy
 }
 
 // NewOAuthCallbackController creates a new OAuth callback controller
-func NewOAuthCallbackController(userRepo repositories.UserRepository) *OAuthCallbackController {
+func NewOAuthCallbackController(userRepo repositories.UserRepository, policy *RegistrationPolicy) *OAuthCallbackController {
 	return &OAuthCallbackController{
 		userRepo: userRepo,
+		policy:   policy,
 	}
 }
 
@@ -71,6 +73,13 @@ func (c *OAuthCallbackController) OAuthCallback(w http.ResponseWriter, r *http.R
 
 	// If user doesn't exist, create a new one
 	if user == nil {
+		// Production capacity gate: a callback that would create a NEW account
+		// counts against the production cap. No-op outside production.
+		if pErr := c.policy.CheckCapacity(ctx); pErr != nil {
+			writeError(w, pErr.status, pErr.message)
+			return
+		}
+
 		log.Printf("Creating new user from OAuth callback: email=%s, name=%s", email, name)
 
 		// Download and convert profile picture to base64 if available

@@ -55,6 +55,23 @@ func (r *fakeUserRepo) Create(_ context.Context, user *models.User) error {
 	return nil
 }
 
+func (r *fakeUserRepo) Count(_ context.Context) (int64, error) {
+	return int64(len(r.byEmail)), nil
+}
+
+// openPolicy returns a RegistrationPolicy in NON-production mode, where all
+// gates are no-ops — matching the demo/development behavior the existing auth
+// tests assume (open signup).
+func openPolicy(repo *fakeUserRepo) *RegistrationPolicy {
+	return NewRegistrationPolicy(false, "", 0, repo)
+}
+
+// prodPolicy returns a RegistrationPolicy in PRODUCTION mode with the given
+// invite code and user cap, for tests that exercise the production gates.
+func prodPolicy(repo *fakeUserRepo, invite string, maxUsers int) *RegistrationPolicy {
+	return NewRegistrationPolicy(true, invite, maxUsers, repo)
+}
+
 func (r *fakeUserRepo) FindByEmail(_ context.Context, email string) (*models.User, error) {
 	user, ok := r.byEmail[email]
 	if !ok {

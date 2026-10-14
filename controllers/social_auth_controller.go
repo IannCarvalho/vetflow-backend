@@ -95,12 +95,14 @@ func verifyGoogleIDToken(idToken string) (*verifiedIdentity, error) {
 // SocialAuthController handles social authentication operations
 type SocialAuthController struct {
 	userRepo repositories.UserRepository
+	policy   *RegistrationPolicy
 }
 
 // NewSocialAuthController creates a new social auth controller
-func NewSocialAuthController(userRepo repositories.UserRepository) *SocialAuthController {
+func NewSocialAuthController(userRepo repositories.UserRepository, policy *RegistrationPolicy) *SocialAuthController {
 	return &SocialAuthController{
 		userRepo: userRepo,
+		policy:   policy,
 	}
 }
 
@@ -155,6 +157,14 @@ func (c *SocialAuthController) SocialLogin(w http.ResponseWriter, r *http.Reques
 
 	// If user doesn't exist, create a new one
 	if user == nil {
+		// Production capacity gate: a social login that would create a NEW
+		// account counts against the production cap. Existing users logging
+		// back in are unaffected. No-op outside production.
+		if pErr := c.policy.CheckCapacity(ctx); pErr != nil {
+			writeError(w, pErr.status, pErr.message)
+			return
+		}
+
 		log.Printf("Creating new user from social provider: email=%s, name=%s", email, name)
 
 		// Download and convert profile picture to base64 if available

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
@@ -34,6 +35,18 @@ type Config struct {
 	// production (the handler and the seed layer both refuse in prod). Leave
 	// it empty in production so the endpoint stays disabled.
 	AdminResetToken string
+
+	// RegisterInviteCode gates NEW-account creation in PRODUCTION only. When
+	// set, a classic /auth/register must present a matching invite_code or it
+	// is refused. Empty in production DISABLES classic registration entirely
+	// (closed beta). Ignored outside production, so the demo/dev stay open.
+	RegisterInviteCode string
+
+	// MaxProductionUsers caps the total number of accounts in PRODUCTION as a
+	// safety net against runaway signups on free-tier infra (covers classic,
+	// social and OAuth account creation). <= 0 means no cap. Ignored outside
+	// production.
+	MaxProductionUsers int
 }
 
 // ProductionDBName is the MongoDB database that holds real customer data. A
@@ -78,6 +91,9 @@ func LoadConfig() *Config {
 		EmailNotificationsEnabled: getEnv("EMAIL_NOTIFICATIONS_ENABLED", "true") == "true",
 
 		AdminResetToken: os.Getenv("ADMIN_RESET_TOKEN"),
+
+		RegisterInviteCode: os.Getenv("REGISTER_INVITE_CODE"),
+		MaxProductionUsers: parseIntEnv("MAX_PRODUCTION_USERS", 0),
 	}
 
 	log.Printf("Config loaded - MONGO_URI: %s (len=%d), PORT: %s, APP_ENV: %s, SMTP configured: %t, email notifications: %t",
@@ -109,6 +125,18 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
+}
+
+// parseIntEnv reads an integer environment variable, falling back to
+// defaultValue when unset or unparseable.
+func parseIntEnv(key string, defaultValue int) int {
+	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+		log.Printf("Environment variable %s is not a valid integer; using default %d", key, defaultValue)
+	}
+	return defaultValue
 }
 
 // getEnv gets an environment variable with a default value

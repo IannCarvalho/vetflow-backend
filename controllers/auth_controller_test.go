@@ -13,7 +13,7 @@ import (
 
 func TestAuthRegisterSuccess(t *testing.T) {
 	repo := newFakeUserRepo()
-	ctrl := NewAuthController(repo)
+	ctrl := NewAuthController(repo, openPolicy(repo))
 
 	body := models.RegisterRequest{
 		Name:            "Ada Lovelace",
@@ -37,7 +37,7 @@ func TestAuthRegisterSuccess(t *testing.T) {
 
 func TestAuthRegisterDuplicateReturns409(t *testing.T) {
 	repo := newFakeUserRepo()
-	ctrl := NewAuthController(repo)
+	ctrl := NewAuthController(repo, openPolicy(repo))
 
 	body := models.RegisterRequest{
 		Name:            "Ada Lovelace",
@@ -63,7 +63,7 @@ func TestAuthRegisterDuplicateReturns409(t *testing.T) {
 
 func TestAuthLoginSuccess(t *testing.T) {
 	repo := newFakeUserRepo()
-	ctrl := NewAuthController(repo)
+	ctrl := NewAuthController(repo, openPolicy(repo))
 
 	if err := repo.Create(context.Background(), &models.User{
 		Name:     "Ada Lovelace",
@@ -94,7 +94,7 @@ func TestAuthLoginSuccess(t *testing.T) {
 
 func TestAuthLoginWrongPassword(t *testing.T) {
 	repo := newFakeUserRepo()
-	ctrl := NewAuthController(repo)
+	ctrl := NewAuthController(repo, openPolicy(repo))
 
 	if err := repo.Create(context.Background(), &models.User{
 		Name:     "Ada Lovelace",
@@ -117,7 +117,7 @@ func TestAuthLoginWrongPassword(t *testing.T) {
 
 func TestAuthLoginUnknownEmail(t *testing.T) {
 	repo := newFakeUserRepo()
-	ctrl := NewAuthController(repo)
+	ctrl := NewAuthController(repo, openPolicy(repo))
 
 	body := models.LoginRequest{Email: "nobody@example.com", Password: "secret123"}
 	req := httptest.NewRequest(http.MethodPost, "/auth/login", mustJSON(t, body))

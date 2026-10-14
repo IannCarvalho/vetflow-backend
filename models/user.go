@@ -23,6 +23,10 @@ type RegisterRequest struct {
 	Email           string `json:"email"`
 	Password        string `json:"password"`
 	ConfirmPassword string `json:"confirm_password"`
+	// InviteCode is required ONLY in production, where it gates new-account
+	// creation. Ignored outside production. Validated in the controller (not
+	// in Validate()) so the rule stays environment-scoped.
+	InviteCode string `json:"invite_code"`
 }
 
 // LoginRequest is the request body for user login
