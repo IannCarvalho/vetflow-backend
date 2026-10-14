@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -74,6 +75,7 @@ func SeedDatabase(db *mongo.Database) error {
 		return fmt.Errorf("failed to seed test data: %w", err)
 	}
 
+	recordSeedTimestamp(ctx, db)
 	log.Println("Database seeded with test data successfully")
 	return nil
 }
@@ -113,8 +115,89 @@ func ResetDemoDatabase(db *mongo.Database) error {
 		return fmt.Errorf("failed to re-seed test data: %w", err)
 	}
 
+	recordSeedTimestamp(ctx, db)
 	log.Println("Demo database reset and re-seeded successfully")
 	return nil
+}
+
+// demoMetaCollection stores a single document tracking when the demo data was
+// last (re)seeded, so reset-on-boot can throttle itself. It is intentionally
+// NOT in clearCollections' drop list, so a reset never erases its own clock.
+const demoMetaCollection = "_demo_meta"
+
+// defaultDemoResetIntervalHours is how long demo data lives before boot
+// re-seeds it, when DEMO_RESET_INTERVAL_HOURS is unset/invalid.
+const defaultDemoResetIntervalHours = 6
+
+// MaybeResetDemoOnBoot re-seeds the demo database on startup, but only when the
+// last seed is older than the configured window (DEMO_RESET_INTERVAL_HOURS,
+// default 6h). This gives a public demo a hands-off self-cleaning loop — the
+// Render free tier sleeps when idle and re-boots on the next visit, so an idle
+// gap longer than the window yields a clean demo — WITHOUT any external
+// scheduler, token, or dependency.
+//
+// The window matters: without it, every boot would wipe the database, so a
+// redeploy or a restart in the middle of someone's session would destroy their
+// data. With it, a boot shortly after a recent seed is a no-op.
+//
+// It is a no-op outside demo mode (APP_ENV must be exactly "demo"), so neither
+// production nor local development is ever touched. Errors are logged, never
+// fatal: a failed reset must not stop the server from booting.
+func MaybeResetDemoOnBoot(db *mongo.Database) {
+	if strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV"))) != "demo" {
+		return
+	}
+
+	hours := defaultDemoResetIntervalHours
+	if v := strings.TrimSpace(os.Getenv("DEMO_RESET_INTERVAL_HOURS")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			hours = n
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
+	defer cancel()
+
+	meta := db.Collection(demoMetaCollection)
+	var doc struct {
+		LastSeededAt time.Time `bson:"last_seeded_at"`
+	}
+	err := meta.FindOne(ctx, bson.M{"_id": "seed"}).Decode(&doc)
+
+	switch {
+	case err == mongo.ErrNoDocuments:
+		log.Println("Demo reset-on-boot: no prior seed timestamp -> reseeding")
+	case err != nil:
+		log.Printf("Demo reset-on-boot: failed to read seed timestamp (%v) -> skipping to be safe", err)
+		return
+	default:
+		age := time.Since(doc.LastSeededAt)
+		if age < time.Duration(hours)*time.Hour {
+			log.Printf("Demo reset-on-boot: last seed %s ago (< %dh window) -> skipping", age.Round(time.Minute), hours)
+			return
+		}
+		log.Printf("Demo reset-on-boot: last seed %s ago (>= %dh window) -> reseeding", age.Round(time.Minute), hours)
+	}
+
+	if err := ResetDemoDatabase(db); err != nil {
+		log.Printf("Demo reset-on-boot: reset failed: %v", err)
+		return
+	}
+	// Note: ResetDemoDatabase already records the seed timestamp.
+}
+
+// recordSeedTimestamp upserts the "last seeded" clock used by reset-on-boot.
+// Only meaningful in demo mode; harmless elsewhere. Failures are logged, not
+// returned — a missing timestamp just means the next boot reseeds.
+func recordSeedTimestamp(ctx context.Context, db *mongo.Database) {
+	if _, err := db.Collection(demoMetaCollection).UpdateOne(
+		ctx,
+		bson.M{"_id": "seed"},
+		bson.M{"$set": bson.M{"last_seeded_at": time.Now()}},
+		options.Update().SetUpsert(true),
+	); err != nil {
+		log.Printf("Demo meta: failed to record seed timestamp: %v", err)
+	}
 }
 
 // clearCollections drops all seeded collections.

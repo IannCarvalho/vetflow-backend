@@ -82,6 +82,11 @@ func main() {
 			log.Printf("[MAIN] WARNING: Database seed encountered an issue: %v\n", err)
 		}
 		log.Println("[MAIN] Database seed completed")
+
+		// Demo self-cleaning: in demo mode, re-seed on boot when the data is
+		// older than DEMO_RESET_INTERVAL_HOURS. No-op in development. This is
+		// what keeps the public demo clean with no external scheduler.
+		db.MaybeResetDemoOnBoot(database)
 	}
 
 	// Ensure non-unique indexes for vet-scoped and lookup queries. Index
