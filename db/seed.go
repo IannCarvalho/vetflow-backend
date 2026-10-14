@@ -16,6 +16,18 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// Demo/visitor credentials. The seed creates these accounts in every
+// non-production environment, so a public demo can offer a one-click
+// "Entrar como visitante" login. They are intentionally well-known — which is
+// exactly why SeedDatabase refuses to run in production (see below) and the
+// config guard forbids a non-production app from using the production
+// database. NEVER rely on these for a real deployment.
+const (
+	DemoVisitorEmail    = "dr.joao@vetflow.com"
+	DemoVisitorEmailAlt = "dra.maria@vetflow.com"
+	DemoVisitorPassword = "123456"
+)
+
 // SeedDatabase ensures indices exist and populates the database with test data
 // only when it is empty. Existing data is never dropped, so restarting the
 // server does not wipe records created during use. Set SEED_FORCE=true to force
@@ -91,14 +103,14 @@ func dayAt(days int) time.Time {
 
 // seedTestData populates the database with coherent, realistic sample data.
 func seedTestData(ctx context.Context, db *mongo.Database) error {
-	hashedPassword := helpers.HashPassword("123456")
+	hashedPassword := helpers.HashPassword(DemoVisitorPassword)
 	now := time.Now()
 
 	// --- Veterinarians -----------------------------------------------------
 	vet1 := models.User{
 		ID:             primitive.NewObjectID(),
 		Name:           "Dr. João Silva",
-		Email:          "dr.joao@vetflow.com",
+		Email:          DemoVisitorEmail,
 		Password:       hashedPassword,
 		ProfilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=joao",
 		CreatedAt:      now, UpdatedAt: now,
@@ -106,7 +118,7 @@ func seedTestData(ctx context.Context, db *mongo.Database) error {
 	vet2 := models.User{
 		ID:             primitive.NewObjectID(),
 		Name:           "Dra. Maria Oliveira",
-		Email:          "dra.maria@vetflow.com",
+		Email:          DemoVisitorEmailAlt,
 		Password:       hashedPassword,
 		ProfilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=maria",
 		CreatedAt:      now, UpdatedAt: now,
@@ -530,6 +542,9 @@ func seedTestData(ctx context.Context, db *mongo.Database) error {
 		return err
 	}
 	log.Printf("Created %d prescriptions", len(prescriptions))
+
+	log.Printf("Demo visitor login -> email=%s password=%s (non-production only)",
+		DemoVisitorEmail, DemoVisitorPassword)
 
 	return nil
 }
