@@ -65,15 +65,29 @@ func NewRouter(db *mongo.Database) *chi.Mux {
 	// Initialize services
 	notificationService := services.NewNotificationService(notificationRepo, consultationRepo, vaccineRepo, petRepo)
 
+	// Registration policy: controls NEW-account creation in production only
+	// (invite code + account cap). Read from env, consistent with how the
+	// router reads CORS/rate-limit/reset settings. No-op outside production,
+	// so the demo keeps open signup / visitor login.
+	appEnv := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
+	isProd := appEnv == "production" || appEnv == "prod"
+	maxUsers := 0
+	if v, err := strconv.Atoi(strings.TrimSpace(os.Getenv("MAX_PRODUCTION_USERS"))); err == nil {
+		maxUsers = v
+	}
+	registrationPolicy := controllers.NewRegistrationPolicy(
+		isProd, os.Getenv("REGISTER_INVITE_CODE"), maxUsers, userRepo,
+	)
+
 	// Initialize controllers
 	clientController := controllers.NewClientController(clientRepo, petRepo, consultationRepo, vaccineRepo, prescriptionRepo, invoiceRepo, appointmentRepo, attachmentRepo)
 	petController := controllers.NewPetController(petRepo, clientRepo, consultationRepo, vaccineRepo, prescriptionRepo, appointmentRepo, attachmentRepo)
 	consultationController := controllers.NewConsultationController(consultationRepo)
 	vaccineController := controllers.NewVaccineController(vaccineRepo)
-	authController := controllers.NewAuthController(userRepo)
+	authController := controllers.NewAuthController(userRepo, registrationPolicy)
 	userController := controllers.NewUserController(userRepo)
-	socialAuthController := controllers.NewSocialAuthController(userRepo)
-	oauthCallbackController := controllers.NewOAuthCallbackController(userRepo)
+	socialAuthController := controllers.NewSocialAuthController(userRepo, registrationPolicy)
+	oauthCallbackController := controllers.NewOAuthCallbackController(userRepo, registrationPolicy)
 	notificationController := controllers.NewNotificationController(notificationService)
 	prescriptionController := controllers.NewPrescriptionController(prescriptionRepo).
 		WithPrintContext(petRepo, clientRepo, userRepo)

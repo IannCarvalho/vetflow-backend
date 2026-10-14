@@ -25,6 +25,7 @@ type UserRepository interface {
 	FindByObjectID(ctx context.Context, id primitive.ObjectID) (*models.User, error)
 	FindAll(ctx context.Context) ([]*models.User, error)
 	UpdateUser(ctx context.Context, id primitive.ObjectID, updates map[string]any) (*models.User, error)
+	Count(ctx context.Context) (int64, error)
 }
 
 // UserRepositoryImpl implements UserRepository
@@ -118,6 +119,12 @@ func (r *UserRepositoryImpl) FindByObjectID(ctx context.Context, id primitive.Ob
 		return nil, err
 	}
 	return &user, nil
+}
+
+// Count returns the total number of users. Used to enforce the production
+// account cap (MAX_PRODUCTION_USERS).
+func (r *UserRepositoryImpl) Count(ctx context.Context) (int64, error) {
+	return r.collection.CountDocuments(ctx, bson.M{})
 }
 
 // UpdateUser updates a user with the provided updates
