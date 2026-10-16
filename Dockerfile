@@ -4,7 +4,10 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/main.go
+# -trimpath removes local filesystem paths from the binary; -ldflags "-s -w"
+# strips the symbol table and DWARF debug info for a smaller static binary.
+# CGO is disabled so the result is a fully static Linux binary.
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags "-s -w" -o main ./cmd/main.go
 
 FROM debian:bookworm-slim
 
@@ -16,9 +19,11 @@ COPY --from=builder /app/main .
 
 RUN chmod +x /app/main
 
-ENV MONGO_URI="${MONGO_URI:-mongodb://localhost:27017}"
-ENV MONGO_DB="${MONGO_DB:-vetflow}"
-ENV PORT="${PORT:-8080}"
+# Run as an unprivileged user. The application never writes to the filesystem
+# (attachments and profile images are stored base64-encoded in MongoDB; remote
+# images are downloaded into memory), so a read-only, non-root runtime is safe.
+RUN useradd --system --no-create-home --uid 10001 appuser
+USER appuser
 
 EXPOSE 8080
 

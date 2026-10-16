@@ -38,3 +38,14 @@ jobs:
         env:
           JWT_SECRET: ci-only-test-secret
         run: go test ./...
+
+  docker-build:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    needs: no-conflict-markers
+    steps:
+      - uses: actions/checkout@v4
+      # Prove the production image still builds after Dockerfile changes.
+      # Build only — the image is never pushed anywhere.
+      - name: Build image
+        run: docker build -t vetflow-backend:ci .
