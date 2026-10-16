@@ -4150,6 +4150,10 @@ const docTemplate = `{
                 "email": {
                     "type": "string"
                 },
+                "invite_code": {
+                    "description": "InviteCode is required ONLY in production, where it gates new-account\ncreation. Ignored outside production. Validated in the controller (not\nin Validate()) so the rule stays environment-scoped.",
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -4169,7 +4173,7 @@ const docTemplate = `{
                 },
                 "userData": {
                     "type": "object",
-                    "additionalProperties": true
+                    "additionalProperties": {}
                 }
             }
         },
