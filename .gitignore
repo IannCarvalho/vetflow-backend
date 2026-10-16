@@ -43,6 +43,9 @@ bin/
 dist/
 .vercel
 
+# `air` hot-reload build output (compiled binary, not source)
+tmp/
+
 # Workflow/agent task metadata (not source)
 .agents/
 
