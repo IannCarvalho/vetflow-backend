@@ -22,10 +22,16 @@ recover, autenticação JWT e rate limiting das rotas de credenciais.
 1. Configura **CORS** a partir de `CORS_ALLOWED_ORIGINS` (lista separada por
    vírgula; vazio = `*`, comportamento de dev).
 2. Aplica `middleware.Logger` e `middleware.Recoverer`.
-3. Instancia **todos** os repositórios, serviços e controllers (DI explícita).
+3. Instancia **todos** os repositórios, serviços e controllers (DI explícita),
+   incluindo a `RegistrationPolicy` (invite code + teto de contas; ativa apenas
+   em produção, lida de `REGISTER_INVITE_CODE` / `MAX_PRODUCTION_USERS`).
 4. Expõe `GET /health` (readiness, com ping ao Mongo; não autenticado).
-5. Serve a documentação Swagger em `/swagger/*`.
-6. Registra os grupos de rotas: `/auth`, `/users`, `/clients`, `/pets`,
+5. Expõe `POST /admin/reset-demo` (não-produção): protegido por três camadas —
+   `APP_ENV` não-produção (senão `404`), `X-Admin-Token` igual a
+   `ADMIN_RESET_TOKEN` (comparação em tempo constante) e a guarda interna de
+   `db.ResetDemoDatabase`. Limpa e re-semeia o banco da demo.
+6. Serve a documentação Swagger em `/swagger/*`.
+7. Registra os grupos de rotas: `/auth`, `/users`, `/clients`, `/pets`,
    `/consultations`, `/vaccines`, `/prescriptions`, `/catalog`, `/invoices`,
    `/appointments`, `/attachments`, `/dashboard`, `/notifications`.
 

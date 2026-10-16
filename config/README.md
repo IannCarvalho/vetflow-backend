@@ -28,6 +28,12 @@ configurações em runtime.
 | `SMTPFrom` | `SMTP_FROM` | — |
 | `FromName` | `SMTP_FROM_NAME` | `VetFlow` |
 | `EmailNotificationsEnabled` | `EMAIL_NOTIFICATIONS_ENABLED` | `true` |
+| `AdminResetToken` | `ADMIN_RESET_TOKEN` | — (vazio = `/admin/reset-demo` desabilitado) |
+| `RegisterInviteCode` | `REGISTER_INVITE_CODE` | — (produção; vazio = cadastro clássico fechado) |
+| `MaxProductionUsers` | `MAX_PRODUCTION_USERS` | `0` (sem teto) |
+
+> `DEMO_RESET_INTERVAL_HOURS` e `SEED_FORCE` **não** vivem na struct `Config` —
+> são lidos diretamente em [`../db/seed.go`](../db/README.md).
 
 A lista canônica de variáveis vive em [`../.env.example`](../.env.example).
 
@@ -38,6 +44,11 @@ A lista canônica de variáveis vive em [`../.env.example`](../.env.example).
   tokens para qualquer usuário).
 - **`IsProduction()`**: `APP_ENV` igual a `production`/`prod` (case-insensitive).
   Usado para pular seed e desabilitar comportamentos de dev.
+- **`IsDemo()`**: `APP_ENV` igual a `demo` (case-insensitive). Modo demo roda o
+  mesmo código de produção, porém contra um banco descartável com dados falsos.
+- **Guarda de isolamento**: `Validate()` recusa iniciar quando `APP_ENV` é
+  não-produção **e** `MONGO_DB` aponta para o banco de produção (`vetflow`),
+  evitando que o seed/visitor login corrompa dados reais.
 - **Mascaramento**: `maskPassword` (usado no log de boot e em `String()`)
   troca a senha do userinfo do `MONGO_URI` por `****`
   (`mongodb+srv://app:****@cluster/...`), preservando host, banco e opções.

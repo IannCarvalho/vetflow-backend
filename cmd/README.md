@@ -22,6 +22,8 @@ o servidor HTTP.
    `CloseConnection` no `defer`.
 4. **Seed** — roda `db.SeedDatabase` apenas fora de produção
    (`cfg.IsProduction()` evita injetar contas-demo com senha conhecida em prod).
+   Em seguida, `db.MaybeResetDemoOnBoot` re-semeia a demo no boot quando os dados
+   estão mais velhos que `DEMO_RESET_INTERVAL_HOURS` (no-op em development).
 5. **Índices** — `db.CreateIndexes` com timeout de 30s; falhas apenas logam e
    nunca bloqueiam o boot.
 6. **Router** — monta o roteador Chi com `routes.NewRouter(database)`.
