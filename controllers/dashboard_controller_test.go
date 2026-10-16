@@ -350,12 +350,24 @@ func TestDashboardStatsPreservesPerCountErrorMessage(t *testing.T) {
 		inject      func(*fakeClientRepo, *fakePetRepo, *fakeConsultationRepo, *fakeVaccineRepo, *fakeInvoiceRepo, *fakeAppointmentRepo)
 		wantMessage string
 	}{
-		{"clients", func(cl *fakeClientRepo, _ *fakePetRepo, _ *fakeConsultationRepo, _ *fakeVaccineRepo, _ *fakeInvoiceRepo, _ *fakeAppointmentRepo) { cl.countErr = boom }, "Falha ao recuperar clientes"},
-		{"pets", func(_ *fakeClientRepo, p *fakePetRepo, _ *fakeConsultationRepo, _ *fakeVaccineRepo, _ *fakeInvoiceRepo, _ *fakeAppointmentRepo) { p.countErr = boom }, "Falha ao recuperar pets"},
-		{"consultations", func(_ *fakeClientRepo, _ *fakePetRepo, co *fakeConsultationRepo, _ *fakeVaccineRepo, _ *fakeInvoiceRepo, _ *fakeAppointmentRepo) { co.countErr = boom }, "Falha ao recuperar consultas"},
-		{"vaccines", func(_ *fakeClientRepo, _ *fakePetRepo, _ *fakeConsultationRepo, v *fakeVaccineRepo, _ *fakeInvoiceRepo, _ *fakeAppointmentRepo) { v.countErr = boom }, "Falha ao recuperar vacinas"},
-		{"invoices", func(_ *fakeClientRepo, _ *fakePetRepo, _ *fakeConsultationRepo, _ *fakeVaccineRepo, inv *fakeInvoiceRepo, _ *fakeAppointmentRepo) { inv.countErr = boom }, "Falha ao recuperar faturas"},
-		{"appointments", func(_ *fakeClientRepo, _ *fakePetRepo, _ *fakeConsultationRepo, _ *fakeVaccineRepo, _ *fakeInvoiceRepo, a *fakeAppointmentRepo) { a.countErr = boom }, "Falha ao recuperar agendamentos"},
+		{"clients", func(cl *fakeClientRepo, _ *fakePetRepo, _ *fakeConsultationRepo, _ *fakeVaccineRepo, _ *fakeInvoiceRepo, _ *fakeAppointmentRepo) {
+			cl.countErr = boom
+		}, "Falha ao recuperar clientes"},
+		{"pets", func(_ *fakeClientRepo, p *fakePetRepo, _ *fakeConsultationRepo, _ *fakeVaccineRepo, _ *fakeInvoiceRepo, _ *fakeAppointmentRepo) {
+			p.countErr = boom
+		}, "Falha ao recuperar pets"},
+		{"consultations", func(_ *fakeClientRepo, _ *fakePetRepo, co *fakeConsultationRepo, _ *fakeVaccineRepo, _ *fakeInvoiceRepo, _ *fakeAppointmentRepo) {
+			co.countErr = boom
+		}, "Falha ao recuperar consultas"},
+		{"vaccines", func(_ *fakeClientRepo, _ *fakePetRepo, _ *fakeConsultationRepo, v *fakeVaccineRepo, _ *fakeInvoiceRepo, _ *fakeAppointmentRepo) {
+			v.countErr = boom
+		}, "Falha ao recuperar vacinas"},
+		{"invoices", func(_ *fakeClientRepo, _ *fakePetRepo, _ *fakeConsultationRepo, _ *fakeVaccineRepo, inv *fakeInvoiceRepo, _ *fakeAppointmentRepo) {
+			inv.countErr = boom
+		}, "Falha ao recuperar faturas"},
+		{"appointments", func(_ *fakeClientRepo, _ *fakePetRepo, _ *fakeConsultationRepo, _ *fakeVaccineRepo, _ *fakeInvoiceRepo, a *fakeAppointmentRepo) {
+			a.countErr = boom
+		}, "Falha ao recuperar agendamentos"},
 	}
 
 	for _, tc := range cases {

@@ -1,0 +1,21 @@
+# Normalize line endings. Go tooling (gofmt) expects LF; without this a
+# Windows checkout with core.autocrlf=true writes CRLF locally and gofmt would
+# flag every file. Enforcing LF in the repo keeps the CI gofmt gate reliable
+# regardless of the contributor's platform.
+* text=auto eol=lf
+
+# Explicit LF for source and config that must never be CRLF.
+*.go text eol=lf
+*.mod text eol=lf
+*.sum text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.sh text eol=lf
+
+# Shell/PowerShell helper scripts.
+*.ps1 text eol=crlf
+
+# Treat the compiled binary artifacts as binary (defensive).
+*.exe binary
