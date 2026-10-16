@@ -13,6 +13,7 @@ resposta JSON. É a fronteira entre o mundo HTTP e o domínio.
 | `auth_controller.go` | `/auth` — register, login, verify. |
 | `social_auth_controller.go` | `/auth/social-login` — valida ID token do Google server-side. |
 | `oauth_callback_controller.go` | `/auth/oauth/callback` — emite JWT real. |
+| `registration_policy.go` | Política de criação de conta em produção (invite code + teto de usuários); compartilhada por auth/social/OAuth. |
 | `user_controller.go` | `/users` — perfil, foto, troca de senha. |
 | `client_controller.go` | `/clients`. |
 | `pet_controller.go` | `/pets`. |

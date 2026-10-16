@@ -12,7 +12,7 @@ produção.
 | --- | --- |
 | `mongo.go` | `NewMongoConnection` / `CloseConnection` — ciclo de vida da conexão. |
 | `indexes.go` | `CreateIndexes` — índices idempotentes por coleção. |
-| `seed.go` | `SeedDatabase` — dados de teste/demo (nunca em produção). |
+| `seed.go` | `SeedDatabase` / `ResetDemoDatabase` / `MaybeResetDemoOnBoot` — dados de teste/demo (nunca em produção) e reset da demo. |
 
 ## Conexão (`mongo.go`)
 
@@ -44,3 +44,10 @@ produção.
 `SeedDatabase` insere contas-demo e dados de exemplo. **Nunca roda em
 produção** — `cmd/main.go` pula o seed quando `cfg.IsProduction()` é verdadeiro,
 pois a senha das contas é conhecida (seria um backdoor de credenciais).
+`SEED_FORCE=true` força um wipe + re-seed limpo no boot (fora de produção).
+
+- `ResetDemoDatabase(db)` limpa e re-semeia o banco da demo (também protegido
+  contra rodar em produção). É o que o endpoint `POST /admin/reset-demo` chama.
+- `MaybeResetDemoOnBoot(db)` roda **apenas em modo demo**: re-semeia no boot se o
+  último seed for mais antigo que `DEMO_RESET_INTERVAL_HOURS` (default 6; `0` =
+  todo boot). Mantém a demo auto-limpa sem agendador externo.

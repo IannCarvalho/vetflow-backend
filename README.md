@@ -3,7 +3,10 @@
 A production-ready REST API for managing veterinary clinics, built with **Go** and
 **MongoDB**, following SOLID principles and an MVC-style architecture.
 
-> This is the backend of the [VetFlow monorepo](https://github.com/IannCarvalho/vetflow). For the web client, see
+> This is the backend of **VetFlow**. The umbrella repository
+> [`vetflow`](https://github.com/IannCarvalho/vetflow) is a **map of four
+> independent repositories** (backend, frontend, agent, MCP) — not a monorepo.
+> For the web client, see
 > [`vetflow-frontend`](https://github.com/IannCarvalho/vetflow-frontend).
 
 > **Note — no LiteLLM here.** This backend is written in **Go** and never imports
@@ -44,6 +47,13 @@ A production-ready REST API for managing veterinary clinics, built with **Go** a
 - **Vaccine Tracking** — batch info and next-dose scheduling
 - **Notifications** — generated for upcoming consultations/vaccines, with an SMTP email scheduler
 - **MongoDB Integration** — flexible NoSQL storage with explicit index creation
+- **Demo mode** (`APP_ENV=demo`) — a public, throwaway deployment with a one-click
+  visitor login, fake data seeded on boot, auto-reset on boot (re-seeds when the
+  data is older than `DEMO_RESET_INTERVAL_HOURS`) and a protected
+  `POST /admin/reset-demo` endpoint (`X-Admin-Token`) for a scheduled wipe/reseed
+- **Production access control** — new-account creation is gated in production via
+  an invite code (`REGISTER_INVITE_CODE`) and an account cap (`MAX_PRODUCTION_USERS`),
+  so free-tier infra stays controlled; open signup remains in demo/development
 - **Docker Support** — `docker-compose` for one-command local runs
 - **SOLID / Interface-based design** — repository pattern + dependency injection for testability
 
@@ -173,12 +183,17 @@ Source of truth is [`.env.example`](.env.example). Key variables:
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
 | `MONGO_URI` | yes | — | MongoDB connection string (local or Atlas) |
-| `MONGO_DB` | yes | `vetflow` | Database name |
+| `MONGO_DB` | yes | `vetflow` | Database name. A non-production `APP_ENV` must **not** point this at the production database `vetflow` (the app refuses to start) — use e.g. `vetflow_demo` |
 | `PORT` | no | `8080` | HTTP listen port |
-| `APP_ENV` | no | `development` | `development` or `production` |
+| `APP_ENV` | no | `development` | `development`, `demo` or `production` |
 | `JWT_SECRET` | **yes (all envs)** | — | JWT signing secret. The app **refuses to start** without it — no dev fallback. Generate with `openssl rand -hex 32` |
 | `CORS_ALLOWED_ORIGINS` | no | `*` | Comma-separated allowed origins; empty allows all |
 | `AUTH_RATE_LIMIT_PER_MIN` | no | `10` | Per-IP/minute limit on `/auth/login` & `/auth/register`; `0` disables |
+| `SEED_FORCE` | no | `false` | When `true`, forces a clean wipe + re-seed on startup (non-production only) |
+| `ADMIN_RESET_TOKEN` | no | — | Enables `POST /admin/reset-demo`; callers must present this value in the `X-Admin-Token` header. Honored only outside production; leave unset in prod |
+| `DEMO_RESET_INTERVAL_HOURS` | no | `6` | Demo only: on boot, re-seed if the last seed is older than this many hours (`0` = reset every boot). Keeps the public demo self-cleaning with no external scheduler |
+| `REGISTER_INVITE_CODE` | no | — | **Production only**: invite code required by `POST /auth/register`. If unset in production, classic registration is **closed**. Ignored outside production |
+| `MAX_PRODUCTION_USERS` | no | `0` | **Production only**: cap on total accounts (classic + social + OAuth); `0`/unset = no cap. Ignored outside production |
 | `EMAIL_NOTIFICATIONS_ENABLED` | no | `true` | Enables the daily email reminder scheduler |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` / `SMTP_FROM_NAME` | no | — | SMTP settings; if `SMTP_HOST` is empty the mailer runs in log-only mode |
 
