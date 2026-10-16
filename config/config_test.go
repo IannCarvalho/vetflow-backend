@@ -36,14 +36,44 @@ func TestGetEnv_ReturnsDefaultWhenEmpty(t *testing.T) {
 
 func TestMaskPassword(t *testing.T) {
 	tests := []struct {
-		name string
-		uri  string
-		want string
+		name   string
+		uri    string
+		want   string
+		secret string // must never appear in the masked output
 	}{
 		{
-			name: "short uri returned unchanged",
+			name:   "atlas srv uri: password masked, host/db/options kept",
+			uri:    "mongodb+srv://vetflow:S3cretPassw0rd@cluster0.ab1cd.mongodb.net/vetflow?retryWrites=true&w=majority",
+			want:   "mongodb+srv://vetflow:****@cluster0.ab1cd.mongodb.net/vetflow?retryWrites=true&w=majority",
+			secret: "S3cretPassw0rd",
+		},
+		{
+			name:   "short uri with password (was logged in full before)",
+			uri:    "mongodb://admin:admin@localhost:27017",
+			want:   "mongodb://admin:****@localhost:27017",
+			secret: ":admin@",
+		},
+		{
+			name:   "multi-host replica set",
+			uri:    "mongodb://app:pw123@h1:27017,h2:27017/db?replicaSet=rs0",
+			want:   "mongodb://app:****@h1:27017,h2:27017/db?replicaSet=rs0",
+			secret: "pw123",
+		},
+		{
+			name:   "percent-encoded reserved chars in the password",
+			uri:    "mongodb://app:p%40ss%2Fw0rd@host/db",
+			want:   "mongodb://app:****@host/db",
+			secret: "p%40ss",
+		},
+		{
+			name: "no credentials returned unchanged",
 			uri:  "mongodb://mongo:27017",
 			want: "mongodb://mongo:27017",
+		},
+		{
+			name: "username only returned unchanged",
+			uri:  "mongodb://reader@host:27017/db",
+			want: "mongodb://reader@host:27017/db",
 		},
 		{
 			name: "empty uri returned unchanged",
@@ -51,19 +81,9 @@ func TestMaskPassword(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "uri exactly 49 chars returned unchanged",
-			uri:  strings.Repeat("a", 49),
-			want: strings.Repeat("a", 49),
-		},
-		{
-			name: "uri of 50 chars returned unchanged (not < 50)",
-			uri:  strings.Repeat("b", 50),
-			want: strings.Repeat("b", 50)[:50] + "...",
-		},
-		{
-			name: "long uri truncated to 50 chars plus ellipsis",
-			uri:  strings.Repeat("c", 80),
-			want: strings.Repeat("c", 50) + "...",
+			name: "not a uri returned unchanged",
+			uri:  "not-a-connection-string",
+			want: "not-a-connection-string",
 		},
 	}
 
@@ -72,6 +92,9 @@ func TestMaskPassword(t *testing.T) {
 			got := maskPassword(tt.uri)
 			if got != tt.want {
 				t.Fatalf("maskPassword(%q) = %q, want %q", tt.uri, got, tt.want)
+			}
+			if tt.secret != "" && strings.Contains(got, tt.secret) {
+				t.Fatalf("maskPassword(%q) leaked %q: %q", tt.uri, tt.secret, got)
 			}
 		})
 	}
