@@ -149,12 +149,38 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
-// maskPassword masks the password in the connection string for logging
+// maskPassword hides the password in a connection string's userinfo so the URI
+// can be logged safely:
+//
+//	mongodb+srv://app:s3cret@cluster0.example.net/vetflow
+//	-> mongodb+srv://app:****@cluster0.example.net/vetflow
+//
+// URIs without a password are returned unchanged. It deliberately does not use
+// net/url: a MongoDB URI may list several hosts ("h1:27017,h2:27017"), which
+// url.Parse rejects. Reserved characters inside the credentials must be
+// percent-encoded in a valid MongoDB URI, so the authority ends at the first
+// '/', '?' or '#', and the userinfo ends at the last '@' inside it.
 func maskPassword(uri string) string {
-	if len(uri) < 50 {
+	schemeEnd := strings.Index(uri, "://")
+	if schemeEnd < 0 {
 		return uri
 	}
-	return uri[:50] + "..."
+	authorityStart := schemeEnd + len("://")
+	rest := uri[authorityStart:]
+
+	authorityEnd := strings.IndexAny(rest, "/?#")
+	if authorityEnd < 0 {
+		authorityEnd = len(rest)
+	}
+	at := strings.LastIndex(rest[:authorityEnd], "@")
+	if at < 0 {
+		return uri // no credentials
+	}
+	colon := strings.Index(rest[:at], ":")
+	if colon < 0 {
+		return uri // username only: nothing secret to hide
+	}
+	return uri[:authorityStart] + rest[:colon] + ":****" + rest[at:]
 }
 
 // String returns a string representation of the config

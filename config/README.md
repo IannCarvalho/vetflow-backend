@@ -38,8 +38,10 @@ A lista canônica de variáveis vive em [`../.env.example`](../.env.example).
   tokens para qualquer usuário).
 - **`IsProduction()`**: `APP_ENV` igual a `production`/`prod` (case-insensitive).
   Usado para pular seed e desabilitar comportamentos de dev.
-- **Mascaramento**: `maskPassword` e `String()` evitam vazar credenciais do
-  `MONGO_URI` nos logs.
+- **Mascaramento**: `maskPassword` (usado no log de boot e em `String()`)
+  troca a senha do userinfo do `MONGO_URI` por `****`
+  (`mongodb+srv://app:****@cluster/...`), preservando host, banco e opções.
+  URIs sem senha saem inalteradas.
 
 ## Quem consome
 
